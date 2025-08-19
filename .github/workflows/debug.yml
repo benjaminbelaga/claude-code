@@ -1,0 +1,45 @@
+name: 🔍 Debug Secrets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: 📦 Install CLASP
+      run: npm install -g @google/clasp
+    
+    - name: 🧪 Test Secrets Format
+      run: |
+        echo "Testing CLASPRC_JSON format..."
+        echo '${{ secrets.CLASPRC_JSON }}' | jq . > /dev/null && echo "✅ CLASPRC_JSON is valid JSON" || echo "❌ CLASPRC_JSON is invalid JSON"
+        
+        echo "Testing CLASP_JSON format..."
+        echo '${{ secrets.CLASP_JSON }}' | jq . > /dev/null && echo "✅ CLASP_JSON is valid JSON" || echo "❌ CLASP_JSON is invalid JSON"
+    
+    - name: 🔑 Create CLASP Credentials (Verbose)
+      run: |
+        echo "Creating .clasprc.json..."
+        echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+        echo "File created with $(wc -c < ~/.clasprc.json) characters"
+        
+        echo "Creating .clasp.json..."
+        echo '${{ secrets.CLASP_JSON }}' > .clasp.json
+        echo "File created with $(wc -c < .clasp.json) characters"
+        
+        echo "Validating files..."
+        ls -la ~/.clasprc.json .clasp.json
+    
+    - name: 🚀 Test CLASP Status
+      run: |
+        clasp login --status || echo "Login status check failed"
