@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 15px;
+        margin: 0;
+      }
+      
+      .header {
+        background: #f0f0f0;
+        padding: 10px;
+        margin: -15px -15px 20px -15px;
+        border-bottom: 2px solid #ddd;
+      }
+      
+      .issue-item {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        padding: 15px;
+        background: #fafafa;
+      }
+      
+      .issue-header {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+      
+      .issue-type-error {
+        color: #d9534f;
+      }
+      
+      .issue-type-suggestion {
+        color: #f0ad4e;
+      }
+      
+      .locations {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 10px;
+        font-family: monospace;
+      }
+      
+      .correction-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      
+      .suggestion-hint {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 8px;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: #856404;
+      }
+      
+      .button-container {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+      }
+      
+      .btn {
+        padding: 12px 30px;
+        margin: 0 10px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        display: inline-block;
+        text-align: center;
+        min-width: 150px;
+      }
+      
+      .btn-primary {
+        background-color: #28a745 !important;
+        color: white !important;
+        border: 2px solid #28a745 !important;
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3) !important;
+      }
+      
+      .btn-primary:hover {
+        background-color: #218838 !important;
+        border-color: #218838 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4) !important;
+      }
+      
+      .btn-secondary {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border: 2px solid #dc3545 !important;
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3) !important;
+      }
+      
+      .btn-secondary:hover {
+        background-color: #c82333 !important;
+        border-color: #c82333 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4) !important;
+      }
+      
+      .btn:hover {
+        opacity: 0.8;
+      }
+      
+      .progress-container {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+      
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h2>🔧 Genre Validation & Correction</h2>
+      <p id="issue-count">Loading issues...</p>
+    </div>
+    
+    <div id="issues-container">
+      <!-- Issues will be loaded here by JavaScript -->
+    </div>
+    
+    <div class="button-container">
+      <button class="btn btn-primary" onclick="applyCorrections()" style="
+        background-color: #28a745 !important; 
+        color: #FFFFFF !important; 
+        border: 3px solid #28a745 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        padding: 15px 40px !important;
+        margin: 10px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        min-width: 200px !important;
+        height: 50px !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+      ">✅ APPLY ALL CORRECTIONS</button>
+      <button class="btn btn-secondary" onclick="cancelDialog()" style="
+        background-color: #dc3545 !important; 
+        color: #FFFFFF !important; 
+        border: 3px solid #dc3545 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        padding: 15px 40px !important;
+        margin: 10px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        min-width: 200px !important;
+        height: 50px !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+      ">❌ CANCEL</button>
+    </div>
+    
+    <div id="progress-container" class="progress-container">
+      <div class="spinner"></div>
+      <p id="progress-message">Processing corrections...</p>
+    </div>
+
+    <script>
+      let issuesData = [];
+      
+      // Load issues when the dialog opens
+      window.onload = function() {
+        loadValidationIssues();
+      };
+      
+      function loadValidationIssues() {
+        console.log('Loading validation issues...');
+        google.script.run
+          .withSuccessHandler(onIssuesLoaded)
+          .withFailureHandler(onLoadError)
+          .getValidationIssues();
+      }
+      
+      function onIssuesLoaded(issuesJson) {
+        console.log('Issues loaded:', issuesJson);
+        
+        if (!issuesJson) {
+          document.getElementById('issues-container').innerHTML = 
+            '<p style="color: red;">No issues data found. Please try running the validator again.</p>';
+          return;
+        }
+        
+        try {
+          issuesData = JSON.parse(issuesJson);
+          displayIssues(issuesData);
+        } catch (e) {
+          console.error('Error parsing issues:', e);
+          document.getElementById('issues-container').innerHTML = 
+            '<p style="color: red;">Error loading issues data. Please try again.</p>';
+        }
+      }
+      
+      function onLoadError(error) {
+        console.error('Error loading issues:', error);
+        document.getElementById('issues-container').innerHTML = 
+          '<p style="color: red;">Error loading issues: ' + error.message + '</p>';
+      }
+      
+      function displayIssues(issues) {
+        const container = document.getElementById('issues-container');
+        const countElement = document.getElementById('issue-count');
+        
+        countElement.textContent = `Found ${issues.length} genre issue(s) to review:`;
+        
+        if (issues.length === 0) {
+          container.innerHTML = '<p style="color: green;">✅ No genre issues found!</p>';
+          return;
+        }
+        
+        let html = '';
+        
+        issues.forEach((issue, index) => {
+          const isError = issue.type === 'ERROR';
+          const isSuggestion = issue.type === 'SUGGESTION';
+          
+          html += `
+            <div class="issue-item">
+              <div class="issue-header ${isError ? 'issue-type-error' : 'issue-type-suggestion'}">
+                ${isError ? '❌' : '💡'} Issue #${index + 1}: "${issue.originalValue}"
+              </div>
+              
+              <div class="locations">
+                SKUs: ${[...new Set(issue.locations.map(loc => loc.sku))].join(', ')}
+              </div>
+              
+              ${isSuggestion ? `
+                <div class="suggestion-hint">
+                  💡 Suggested correction: <strong>${issue.suggestion}</strong>
+                </div>
+              ` : `
+                <div class="suggestion-hint">
+                  🧠 <strong>Help us learn!</strong> Enter the correct genre to contribute to our intelligent database for future suggestions.
+                </div>
+              `}
+              
+              <input 
+                type="text" 
+                class="correction-input" 
+                id="correction-${index}"
+                placeholder="Enter correct genre (or leave empty to delete)"
+                value="${issue.suggestion || ''}"
+              />
+            </div>
+          `;
+        });
+        
+        container.innerHTML = html;
+      }
+      
+      function applyCorrections() {
+        console.log('Applying corrections...');
+        
+        // Show progress
+        document.getElementById('progress-container').style.display = 'block';
+        document.querySelector('.button-container').style.display = 'none';
+        
+        // Collect all corrections
+        const corrections = [];
+        
+        issuesData.forEach((issue, index) => {
+          const inputElement = document.getElementById(`correction-${index}`);
+          const newValue = inputElement ? inputElement.value.trim() : '';
+          
+          // Si l'utilisateur met un espace ou vide, on supprime le genre (vide)
+          if (newValue !== issue.originalValue) {
+            corrections.push({
+              originalValue: issue.originalValue,
+              newValue: newValue === '' ? '' : newValue, // Espace = suppression
+              locations: issue.locations
+            });
+          }
+        });
+        
+        if (corrections.length === 0) {
+          alert('No corrections to apply.');
+          cancelDialog();
+          return;
+        }
+        
+        console.log('Sending corrections:', corrections);
+        
+        // Send corrections to server
+        google.script.run
+          .withSuccessHandler(onCorrectionsApplied)
+          .withFailureHandler(onCorrectionsError)
+          .processCorrections({ corrections: corrections });
+      }
+      
+      function onCorrectionsApplied(result) {
+        console.log('Corrections result:', result);
+        
+        if (result.success) {
+          alert('✅ ' + result.message + '\n\n🧠 Your corrections have been added to our intelligent database for future suggestions!');
+          google.script.host.close();
+        } else {
+          alert('❌ Error: ' + result.message);
+          // Hide progress and show buttons again
+          document.getElementById('progress-container').style.display = 'none';
+          document.querySelector('.button-container').style.display = 'block';
+        }
+      }
+      
+      function onCorrectionsError(error) {
+        console.error('Error applying corrections:', error);
+        alert('❌ Error applying corrections: ' + error.message);
+        // Hide progress and show buttons again
+        document.getElementById('progress-container').style.display = 'none';
+        document.querySelector('.button-container').style.display = 'block';
+      }
+      
+      function cancelDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html> 

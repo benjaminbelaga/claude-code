@@ -1,0 +1,38 @@
+name: 🚀 Deploy to Google Apps Script
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: 📦 Install CLASP
+      run: npm install -g @google/clasp
+    
+    - name: 🔑 Create CLASP Credentials
+      run: |
+        echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+        echo '${{ secrets.CLASP_JSON }}' > .clasp.json
+    
+    - name: 🚀 Deploy to Google Apps Script
+      run: clasp push --force
+      
+    - name: 📊 Deployment Summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📝 Project: WP Import Dashboard"
+        echo "🔗 Script URL: https://script.google.com/u/0/home/projects/1JkXMaf57gFb8XtmT1Bbaoo6goKlhTw2ie1eIQRlDfqra6OG0oOdDEdUy/edit"
