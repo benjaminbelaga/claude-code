@@ -1,0 +1,26 @@
+{
+  "name": "yoyaku-wp-import-dashboard",
+  "version": "2.0.0",
+  "description": "Advanced Google Apps Script for YOYAKU e-commerce operations with direct API integration",
+  "scripts": {
+    "deploy": "clasp push",
+    "pull": "clasp pull",
+    "open": "clasp open"
+  },
+  "keywords": [
+    "google-apps-script",
+    "woocommerce",
+    "api",
+    "yoyaku",
+    "automation"
+  ],
+  "author": "Benjamin Belaga <ben@yoyaku.fr>",
+  "license": "MIT",
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benjaminbelaga/yoyaku-wp-import-dashboard.git"
+  }
+}
