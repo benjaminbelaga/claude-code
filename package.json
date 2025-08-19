@@ -1,7 +1,7 @@
 {
-  "name": "yoyaku-wp-import-dashboard",
+  "name": "wp-import-dashboard",
   "version": "2.0.0",
-  "description": "Advanced Google Apps Script for YOYAKU e-commerce operations with direct API integration",
+  "description": "Advanced Google Apps Script for e-commerce operations with direct API integration",
   "scripts": {
     "deploy": "clasp push",
     "pull": "clasp pull",
@@ -21,6 +21,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/benjaminbelaga/yoyaku-wp-import-dashboard.git"
+    "url": "https://github.com/benjaminbelaga/wp-import-dashboard.git"
   }
 }

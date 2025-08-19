@@ -1,6 +1,6 @@
-# 🚀 YOYAKU WP Import Dashboard
+# 🚀 WP Import Dashboard
 
-Advanced Google Apps Script for managing YOYAKU e-commerce operations with direct API integration.
+Advanced Google Apps Script for managing e-commerce operations with direct API integration.
 
 ## 🎯 Features
 
@@ -92,7 +92,7 @@ WooCommerce API credentials are configured in `api-direct-functions.js`:
 
 ---
 
-*Built with ❤️ for YOYAKU operations team*
+*Built with ❤️ for operations team*
 
 ---
 **Status**: ✅ Auto-deploy configured and tested  
