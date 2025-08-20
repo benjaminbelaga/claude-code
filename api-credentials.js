@@ -18,8 +18,8 @@ const API_CREDENTIALS = {
   // YYDistribution.fr Production
   'yydistribution.fr': {
     url: 'https://www.yydistribution.fr/wp-json/wc/v3/products',
-    consumer_key: 'ck_YOUR_YYD_KEY', // TODO: Add real YYD consumer key
-    consumer_secret: 'cs_YOUR_YYD_SECRET' // TODO: Add real YYD consumer secret
+    consumer_key: 'ck_762cfbeda204362565de52dd24f764233874faef',
+    consumer_secret: 'cs_a02aa1db1c4bd5e169d172fdd25b717403518c19'
   },
   
   // Barcelona (if needed)
