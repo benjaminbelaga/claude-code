@@ -91,6 +91,17 @@ function onOpen() {
   diagnosticsMenu.addItem('💾 Force Refresh Cache', 'forceRefreshCache');
   diagnosticsMenu.addSeparator();
   diagnosticsMenu.addItem('🔍 WordPress Response Diagnostic', 'testWordPressResponseDiagnostic');
+  
+  // NEW API Simulations Sub-menu
+  const apiSimMenu = ui.createMenu('🎯 API Simulations SKU001');
+  apiSimMenu.addItem('🚀 Complete API Sites Simulation', 'runCompleteAPISitesSimulation');
+  apiSimMenu.addSeparator();
+  apiSimMenu.addItem('📍 Picking Update Detail', 'testPickingUpdateDetailed');
+  apiSimMenu.addItem('📊 Stock Update Detail', 'testStockUpdateDetailed');
+  apiSimMenu.addSeparator();
+  apiSimMenu.addItem('🔍 Validate API Endpoints', 'validateAPIEndpoints');
+  diagnosticsMenu.addSubMenu(apiSimMenu);
+  
   menu.addSubMenu(diagnosticsMenu);
   
   const helpMenu = ui.createMenu('🛡️ Help & Setup');
