@@ -1,0 +1,321 @@
+{
+  "google_sheet": {
+    "url": "https://docs.google.com/spreadsheets/d/1L55TCdfJJxZOHyWqx13XKi58pNqNt3wrUm0C4MIs6X4/export?format=csv",
+    "description": "Single sheet used by both sites with different column mappings"
+  },
+  
+  "sites": {
+    "yoyaku.io": {
+      "app_id": "jfnkmjmfer",
+      "imports": {
+        "852": {
+          "name": "Regular New Product Import",
+          "type": "create_product",
+          "enabled": true,
+          "unique_identifier": "{sku}-{distributor}{release_date}",
+          "matching_field": "_sku",
+          "create_new": true,
+          "update_existing": true,
+          
+          "product_fields": {
+            "title": "{title}",
+            "sku": "{sku}",
+            "description": "{description}",
+            "regular_price": "{priceyoyakuio}",
+            "sale_price": "",
+            "stock_quantity": "",
+            "stock_status": "outofstock",
+            "weight": "{weight}",
+            "length": "30",
+            "width": "30",
+            "height": "0.2",
+            "product_type": "simple",
+            "virtual": false,
+            "downloadable": false,
+            "tax_status": "taxable",
+            "manage_stock": true,
+            "allow_backorders": true,
+            "sold_individually": false
+          },
+          
+          "custom_fields": {
+            "_wc_cog_cost": "{pricenet}",
+            "_coming_soon_label": "{release_date}",
+            "_music_formats": "{format}",
+            "_ph_ups_manufacture_country": "FR",
+            "_wf_ups_hst": "85238010",
+            "ph_ups_invoice_desc": "Vinyl record or Phonograph record",
+            "_product_features": "{feature}",
+            "_set_coming_soon": "yes",
+            "_yoyaku_playlist_files_raw": "{playlist_files}",
+            "_depot_vente": "{depotvente}",
+            "hscode_custom_field": "85238010",
+            "_product_origin_country": "FR",
+            "_wp_old_slug": "{sku}",
+            "_product_qr_code": "https://www.yoyaku.io/release/{sku}"
+          },
+          
+          "taxonomies": {
+            "product_cat": {
+              "type": "single",
+              "value": "Forthcoming"
+            },
+            "musiclabel": {
+              "type": "single",
+              "value": "{label}"
+            },
+            "distributormusic": {
+              "type": "single",
+              "value": "{distributor}"
+            },
+            "product_tag": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{tag1},{tag2}"
+            },
+            "musicartist": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{artist1},{artist2},{artist3},{artist4}"
+            },
+            "musicstyle": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{genre1},{genre2},{genre3},{genre4},{genre5}"
+            }
+          },
+          
+          "images": {
+            "featured": {
+              "source": "url",
+              "pattern": "https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/{sku}_{n}_600.jpg",
+              "range": [1, 10]
+            },
+            "gallery": {
+              "source": "media_library",
+              "patterns": [
+                "{sku}.jpg",
+                "{sku}_2.jpg",
+                "{sku}.jpeg",
+                "{sku}_2.jpeg",
+                "{sku}.webp",
+                "{sku}_2.webp",
+                "{sku}.png",
+                "{sku}_2.png"
+              ]
+            }
+          }
+        },
+        
+        "717": {
+          "name": "Pre-order Product Import",
+          "type": "create_product_preorder",
+          "enabled": true,
+          "base_import": "852",
+          "differences": {
+            "stock_quantity": "{quantity}",
+            "custom_fields": {
+              "_is_pre_order": "yes",
+              "_pre_order_date": "{release_date}"
+            }
+          }
+        },
+        
+        "803": {
+          "name": "Stock Update Only",
+          "type": "update_stock",
+          "enabled": true,
+          "unique_identifier": "{sku}",
+          "matching_field": "_sku",
+          "create_new": false,
+          "update_existing": true,
+          
+          "fields_to_update": {
+            "stock_quantity": "{quantity}",
+            "stock_status": "auto"
+          }
+        },
+        
+        "775": {
+          "name": "Picking Location Update",
+          "type": "update_picking",
+          "enabled": true,
+          "unique_identifier": "{sku}",
+          "matching_field": "_sku",
+          "create_new": false,
+          "update_existing": true,
+          
+          "custom_fields": {
+            "_picking_location_1": "{picking1}",
+            "_picking_location_2": "{picking2}"
+          }
+        },
+        
+        "526": {
+          "name": "Export Import",
+          "type": "unknown",
+          "enabled": false,
+          "note": "Not found in database - may be deleted"
+        },
+        
+        "810": {
+          "name": "Delete Products Batch",
+          "type": "delete_products",
+          "enabled": true,
+          "unique_identifier": "{sku}",
+          "matching_field": "_sku",
+          "action": "trash"
+        }
+      }
+    },
+    
+    "yydistribution.fr": {
+      "app_id": "akrjekfvzk",
+      "imports": {
+        "935": {
+          "name": "New Product Import (Pre-Order)",
+          "type": "create_product_preorder",
+          "enabled": true,
+          "unique_identifier": "{title} - {sku}",
+          "matching_field": "_sku",
+          "create_new": true,
+          "update_existing": true,
+          
+          "product_fields": {
+            "title": "{title}",
+            "sku": "{sku}",
+            "regular_price": "{priceyydistribution}",
+            "stock_quantity": "0",
+            "product_type": "simple"
+          },
+          
+          "custom_fields": {
+            "_low_stock_amount": "10",
+            "_product_features": "{feature}",
+            "_is_pre_order": "yes",
+            "_yyd_playlist_files_raw": "{playlist_files}",
+            "_pre_order_date": "{release_date}",
+            "_pre_order_stock_status": "global",
+            "_date_out": "{release_date}",
+            "hscode_custom_field": "85238010",
+            "_product_origin_country": "FR",
+            "ph_ups_invoice_desc": "Vinyl record or Phonograph record"
+          },
+          
+          "taxonomies": {
+            "product_cat": {
+              "type": "single",
+              "value": "{label}"
+            },
+            "musicformat": {
+              "type": "single",
+              "value": "{format}"
+            },
+            "ownermusic": {
+              "type": "single",
+              "value": "{distributor}"
+            },
+            "product_tag": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{tag1},{tag2}"
+            },
+            "musicartist": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{artist1},{artist2},{artist3},{artist4}"
+            },
+            "musicstyle": {
+              "type": "multiple",
+              "delimiter": ",",
+              "value": "{genre1},{genre2},{genre3},{genre4},{genre5}"
+            }
+          }
+        },
+        
+        "953": {
+          "name": "Stock Update",
+          "type": "update_stock",
+          "enabled": true,
+          "unique_identifier": "{sku}",
+          "matching_field": "_sku",
+          "create_new": false,
+          "update_existing": true,
+          
+          "fields_to_update": {
+            "stock_quantity": "{quantity}"
+          }
+        },
+        
+        "941": {
+          "name": "Release Date Update",
+          "type": "update_release_date",
+          "enabled": true,
+          "unique_identifier": "{sku}",
+          "matching_field": "_sku",
+          "create_new": false,
+          "update_existing": true,
+          
+          "custom_fields": {
+            "_pre_order_date": "{release_date}",
+            "_date_out": "{release_date}"
+          }
+        }
+      }
+    }
+  },
+  
+  "column_mappings": {
+    "required": [
+      "sku",
+      "title",
+      "description",
+      "release_date",
+      "priceyoyakuio",
+      "priceyydistribution",
+      "pricenet",
+      "quantity",
+      "weight",
+      "format",
+      "label",
+      "distributor"
+    ],
+    "optional": [
+      "feature",
+      "playlist_files",
+      "depotvente",
+      "artist1",
+      "artist2",
+      "artist3",
+      "artist4",
+      "genre1",
+      "genre2",
+      "genre3",
+      "genre4",
+      "genre5",
+      "tag1",
+      "tag2",
+      "picking1",
+      "picking2",
+      "slug"
+    ]
+  },
+  
+  "processing": {
+    "batch_size": 10,
+    "timeout": 300,
+    "retry_attempts": 3,
+    "retry_delay": 5,
+    "log_level": "info",
+    "error_notification_email": "ben@yoyaku.io"
+  },
+  
+  "api_endpoints": {
+    "create_product": "/wp-json/yoyaku/v1/products/create",
+    "update_stock": "/wp-json/yoyaku/v1/products/update-stock",
+    "update_picking": "/wp-json/yoyaku/v1/products/update-picking",
+    "update_release": "/wp-json/yoyaku/v1/products/update-release",
+    "delete_products": "/wp-json/yoyaku/v1/products/delete",
+    "import_status": "/wp-json/yoyaku/v1/import/status"
+  }
+}

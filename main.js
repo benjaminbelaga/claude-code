@@ -35,8 +35,12 @@ function onOpen() {
   const apiDirectMenu = ui.createMenu('⚡ Update Tools (API Direct NEW)');
   apiDirectMenu.addItem('🚀 Update Picking (Direct API)', 'updatePickingDirectAPI');
   apiDirectMenu.addSeparator();
-  apiDirectMenu.addItem('📦 Update Stock Yoyaku (Coming Soon)', 'showComingSoon');
-  apiDirectMenu.addItem('📦 Update Stock YYD (Coming Soon)', 'showComingSoon');
+  apiDirectMenu.addItem('📦 Update Stock YOYAKU (Direct API)', 'updateYoyakuStockDirectAPI');
+  apiDirectMenu.addItem('📦 Update Stock YYD (Direct API)', 'updateYYDStockDirectAPI');
+  apiDirectMenu.addItem('📅 Update Release Date YYD (Direct API)', 'updateReleaseDateDirectAPI');
+  apiDirectMenu.addSeparator();
+  apiDirectMenu.addItem('🧪 Test Stock Update', 'testStockUpdate');
+  apiDirectMenu.addItem('🧪 Test Release Date Update', 'testReleaseDateUpdate');
   menu.addSubMenu(apiDirectMenu);
   
   // Legacy Update Menu (Keep for transition)
