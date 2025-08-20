@@ -66,11 +66,11 @@ function simulatePickingUpdate() {
   // Simulate field mapping (THE CRITICAL PART)
   const metaData = [
     {
-      key: '_picking_location_1', // Legacy field name (6,342+ products use this)
+      key: '_picking_location_1', // Same field used by WP Import (6,342+ products)
       value: testData.picking1
     },
     {
-      key: '_picking_location_2', // Legacy field name
+      key: '_picking_location_2', // Same field used by WP Import
       value: testData.picking2
     }
   ];
@@ -98,9 +98,9 @@ function simulatePickingUpdate() {
     payload: apiPayload,
     status: 'READY',
     critical_notes: [
-      'Uses LEGACY field names (_picking_location_1/2)',
-      'Compatible with 6,342+ existing products',
-      'Targets YOYAKU.IO production site'
+      'Uses SAME field names as WP Import (_picking_location_1/2)',
+      'Compatible with existing 6,342+ products',
+      'WP Import and API Direct both update same fields'
     ]
   };
 }

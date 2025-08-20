@@ -185,14 +185,14 @@ function updatePickingBatch(batch) {
           
           if (item.picking1) {
             metaData.push({
-              key: '_picking_location_1', // Legacy field name (6,342+ products)
+              key: '_picking_location_1', // Same field as WP Import (6,342+ products)
               value: item.picking1
             });
           }
           
           if (item.picking2) {
             metaData.push({
-              key: '_picking_location_2', // Legacy field name (952+ products)
+              key: '_picking_location_2', // Same field as WP Import (952+ products)
               value: item.picking2
             });
           }
