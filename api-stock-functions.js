@@ -197,8 +197,145 @@ function updateYYDStockDirectAPI() {
   
   if (result !== ui.Button.YES) return;
   
-  // Similar processing logic but with YYD-specific handling
-  // ... (implementation similar to YOYAKU but with pre-order transition)
+  SpreadsheetApp.getActiveSpreadsheet().toast('🔄 Starting YYD stock update...', 'Processing', -1);
+  
+  try {
+    // Get sheet data
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    // Find column indices
+    const skuIndex = headers.findIndex(h => h.toString().toUpperCase() === 'SKU');
+    const quantityIndex = headers.findIndex(h => 
+      h.toString().toLowerCase().includes('new order quantity') ||
+      h.toString().toLowerCase().includes('quantity')
+    );
+    
+    if (skuIndex === -1) {
+      ui.alert('❌ Error', 'SKU column not found!', ui.ButtonSet.OK);
+      return;
+    }
+    
+    if (quantityIndex === -1) {
+      ui.alert('❌ Error', 'New Order Quantity column not found!', ui.ButtonSet.OK);
+      return;
+    }
+    
+    // Prepare batches
+    const batches = [];
+    let currentBatch = [];
+    const BATCH_SIZE = 15; // Smaller batches for YYD due to pre-order logic
+    
+    for (let i = 1; i < data.length; i++) {
+      const sku = data[i][skuIndex];
+      const quantity = data[i][quantityIndex];
+      
+      // Skip invalid rows
+      if (!sku || sku === '' || sku === '#N/A' || sku.toString().trim() === '') {
+        continue;
+      }
+      
+      // Include even if quantity is 0 (out of stock update)
+      if (quantity === '' || quantity === null || quantity === undefined) {
+        continue;
+      }
+      
+      const item = {
+        sku: sku.toString().trim(),
+        row: i + 1,
+        quantity: parseInt(quantity) || 0,
+        status: parseInt(quantity) > 0 ? 'instock' : 'outofstock'
+      };
+      
+      currentBatch.push(item);
+      
+      if (currentBatch.length >= BATCH_SIZE) {
+        batches.push([...currentBatch]);
+        currentBatch = [];
+      }
+    }
+    
+    // Add remaining items
+    if (currentBatch.length > 0) {
+      batches.push(currentBatch);
+    }
+    
+    if (batches.length === 0) {
+      ui.alert('⚠️ No Data', 'No valid SKUs with stock quantities found!', ui.ButtonSet.OK);
+      return;
+    }
+    
+    // Process batches
+    let totalSuccess = 0;
+    let totalErrors = 0;
+    let errorDetails = [];
+    let stockChanges = {
+      increased: 0,
+      decreased: 0,
+      outOfStock: 0,
+      preorderTransitions: 0
+    };
+    
+    for (let i = 0; i < batches.length; i++) {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        `Processing YYD batch ${i + 1}/${batches.length} (${batches[i].length} products)...`,
+        '🔄 Updating YYD Stock',
+        -1
+      );
+      
+      const result = updateStockBatch(batches[i], 'yydistribution.fr');
+      totalSuccess += result.success;
+      totalErrors += result.errors;
+      
+      // Track stock changes
+      if (result.stockChanges) {
+        stockChanges.increased += result.stockChanges.increased;
+        stockChanges.decreased += result.stockChanges.decreased;
+        stockChanges.outOfStock += result.stockChanges.outOfStock;
+        if (result.stockChanges.preorderTransitions) {
+          stockChanges.preorderTransitions += result.stockChanges.preorderTransitions;
+        }
+      }
+      
+      if (result.errorDetails && result.errorDetails.length > 0) {
+        errorDetails = errorDetails.concat(result.errorDetails);
+      }
+      
+      // Rate limiting - YYD needs more time due to pre-order logic
+      if (i < batches.length - 1) {
+        Utilities.sleep(1500);
+      }
+    }
+    
+    // Show detailed results
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ YYD Stock Update Complete!', 'Success', 3);
+    
+    let message = `📊 YYD Stock Update Complete!\\n\\n`;
+    message += `✅ Successfully updated: ${totalSuccess} products\\n`;
+    message += `📈 Stock increased: ${stockChanges.increased}\\n`;
+    message += `📉 Stock decreased: ${stockChanges.decreased}\\n`;
+    message += `⚠️ Out of stock: ${stockChanges.outOfStock}\\n`;
+    message += `🔄 Pre-order transitions: ${stockChanges.preorderTransitions}\\n`;
+    
+    if (totalErrors > 0) {
+      message += `\\n❌ Errors: ${totalErrors} products\\n`;
+      if (errorDetails.length > 0) {
+        message += `\\nError details (first 5):\\n`;
+        errorDetails.slice(0, 5).forEach(err => {
+          message += `• Row ${err.row} (${err.sku}): ${err.error}\\n`;
+        });
+      }
+    }
+    
+    message += `\\n⏱️ Time saved vs WP Import: ~${Math.round(totalSuccess * 3 / 60)} minutes`;
+    message += `\\n🎯 YYD-specific: Pre-orders automatically disabled for in-stock items`;
+    
+    ui.alert('YYD Stock Update Complete', message, ui.ButtonSet.OK);
+    
+  } catch (error) {
+    Logger.log('Critical error in updateYYDStockDirectAPI: ' + error.toString());
+    ui.alert('❌ Critical Error', `An error occurred: ${error.message}`, ui.ButtonSet.OK);
+  }
 }
 
 /**
@@ -219,7 +356,8 @@ function updateStockBatch(batch, site = 'yoyaku.io') {
   let stockChanges = {
     increased: 0,
     decreased: 0,
-    outOfStock: 0
+    outOfStock: 0,
+    preorderTransitions: 0
   };
   
   batch.forEach(item => {
@@ -263,6 +401,14 @@ function updateStockBatch(batch, site = 'yoyaku.io') {
           
           // YYD specific: Handle pre-order transition
           if (site === 'yydistribution.fr' && item.quantity > 0) {
+            // Check if this is a pre-order transition
+            const currentPreorderStatus = product.meta_data && 
+              product.meta_data.find(meta => meta.key === '_is_pre_order');
+            
+            if (currentPreorderStatus && currentPreorderStatus.value === 'yes') {
+              stockChanges.preorderTransitions++;
+            }
+            
             updatePayload.meta_data = [
               { key: '_is_pre_order', value: 'no' },
               { key: '_backorders', value: 'no' }
