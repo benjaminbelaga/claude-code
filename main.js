@@ -33,11 +33,29 @@ function onOpen() {
   
   // NEW API Direct Menu (Fast & Reliable)
   const apiDirectMenu = ui.createMenu('⚡ Update Tools (API Direct NEW)');
+  
+  // Phase 1 Functions (Existing)
   apiDirectMenu.addItem('🚀 Update Picking (Direct API)', 'updatePickingDirectAPI');
   apiDirectMenu.addSeparator();
   apiDirectMenu.addItem('📦 Update Stock YOYAKU (Direct API)', 'updateYoyakuStockDirectAPI');
   apiDirectMenu.addItem('📦 Update Stock YYD (Direct API)', 'updateYYDStockDirectAPI');
   apiDirectMenu.addItem('📅 Update Release Date YYD (Direct API)', 'updateReleaseDateDirectAPI');
+  apiDirectMenu.addSeparator();
+  
+  // Phase 2 NEW: Import 852 - Create New Products
+  const import852Menu = ui.createMenu('🚀 Create New Products (Import 852)');
+  import852Menu.addItem('📦 Create New Products (API Direct)', 'processImport852NewProductsAPI');
+  import852Menu.addSeparator();
+  import852Menu.addItem('🧪 Test Import 852 API', 'testImport852API');
+  import852Menu.addItem('🔍 Validate Configuration', 'validateImport852Config');
+  import852Menu.addItem('📊 View Dashboard', 'showImport852Dashboard');
+  import852Menu.addSeparator();
+  import852Menu.addItem('⚙️ Setup Configuration', 'setupImport852Configuration');
+  import852Menu.addItem('🔄 Reset Configuration', 'resetImport852Configuration');
+  import852Menu.addSeparator();
+  import852Menu.addItem('📋 Legacy WP Import Instructions', 'showLegacyImport852Instructions');
+  apiDirectMenu.addSubMenu(import852Menu);
+  
   apiDirectMenu.addSeparator();
   apiDirectMenu.addItem('🧪 Test Stock Update', 'testStockUpdate');
   apiDirectMenu.addItem('🧪 Test Release Date Update', 'testReleaseDateUpdate');
