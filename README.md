@@ -1,8 +1,9 @@
 # 🚀 WP Import Dashboard - Direct API Edition
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 [![Status](https://img.shields.io/badge/status-production--ready-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 [![Performance](https://img.shields.io/badge/performance-20x_faster-orange.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
+[![OpenAI](https://img.shields.io/badge/OpenAI-Direct_API-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 
 **Enterprise-grade Google Apps Script solution for high-performance e-commerce operations with direct WooCommerce API integration.**
 
@@ -12,8 +13,10 @@
 
 ## 📚 Table des matières
 
+- [🆕 What's New - v1.1.1](#-whats-new---v111)
 - [🎯 Vue d'ensemble](#-vue-densemble)
 - [🚀 Installation rapide](#-installation-rapide)
+- [🤖 OpenAI Metadata Parser](#-openai-metadata-parser)
 - [⚙️ Configuration](#️-configuration)
 - [🎮 Guide d'utilisation](#-guide-dutilisation)
 - [🔥 Fonctionnalités Phase 1](#-fonctionnalités-phase-1)
@@ -24,6 +27,43 @@
 - [🔧 Dépannage](#-dépannage)
 - [🗺️ Roadmap](#️-roadmap)
 - [💬 Support](#-support)
+
+---
+
+## 🆕 What's New - v1.1.1
+
+### 🤖 Direct OpenAI Metadata Parser (October 2025)
+
+**Élimination complète de Make.com** - Parsing de métadonnées maintenant 100% intégré dans Google Apps Script.
+
+#### Avant vs Après
+
+| Métrique | Make.com (Ancien) | OpenAI Direct (Nouveau) | Gain |
+|----------|-------------------|------------------------|------|
+| **Coût mensuel** | $36-40 | ~$5 | **-87%** |
+| **Coût annuel** | ~$432-480 | ~$60 | **$420 économisés** |
+| **Vitesse** | 3-5s/produit | 1-2s/produit | **3x plus rapide** |
+| **Latence réseau** | 3 hops | 1 hop | **-67%** |
+| **Debugging** | Complexe | Simple | **Énorme** |
+
+#### Features
+
+- ✅ **API OpenAI directe** - Aucun intermédiaire
+- ✅ **Sécurité PropertiesService** - Clé API encryptée
+- ✅ **Menu intégré** - Setup en 2 minutes
+- ✅ **Tests unitaires** - Validation avant production
+- ✅ **Cost monitoring** - Dashboard économies temps réel
+- ✅ **Support GPT-4o & GPT-4o-mini** - Optimisation coûts
+
+#### Quick Start
+
+```
+1. Menu > 📊 metadata > ⚙️ Setup OpenAI API Key
+2. Menu > 📊 metadata > 🧪 Test Single Row Parsing
+3. Menu > 📊 metadata > 🤖 AI Parsing (OpenAI Direct)
+```
+
+📖 **Guide complet:** [OPENAI-SETUP.md](./OPENAI-SETUP.md)
 
 ---
 
@@ -89,6 +129,147 @@ const API_CREDENTIALS = {
 // Dans Google Apps Script
 testQuickConnectivity(); // Valide les APIs
 ```
+
+---
+
+## 🤖 OpenAI Metadata Parser
+
+### Vue d'ensemble
+
+Remplace complètement le workflow Make.com pour le parsing de métadonnées produits avec une intégration directe OpenAI API.
+
+### Architecture
+
+```
+Avant (Make.com):
+Google Sheet → Make.com Webhook → OpenAI → Make.com → Google Sheet
+(5-7 secondes, $40/mois, 3 points de failure)
+
+Après (Direct):
+Google Sheet → OpenAI API → Google Sheet
+(1-2 secondes, $5/mois, 1 point de failure)
+```
+
+### Installation
+
+#### 1. Obtenir une clé API OpenAI
+
+1. Créer un compte: https://platform.openai.com/signup
+2. Ajouter $10 de crédits (suffisant pour ~2000 produits)
+3. Créer une clé API: https://platform.openai.com/api-keys
+   - Nom: "WP Import Dashboard"
+   - Copier la clé (commence par `sk-...`)
+
+#### 2. Configurer dans Google Sheet
+
+```
+Menu > 📊 metadata > ⚙️ Setup OpenAI API Key
+→ Coller la clé
+→ OK
+```
+
+La clé est stockée de manière sécurisée via `PropertiesService` (encrypted at rest).
+
+#### 3. Test de fonctionnement
+
+```
+Menu > 📊 metadata > 🧪 Test OpenAI Connection
+```
+
+Vérifie:
+- ✅ Clé API valide
+- ✅ Crédits disponibles
+- ✅ Connexion OpenAI OK
+
+#### 4. Test de parsing
+
+```
+Menu > 📊 metadata > 🧪 Test Single Row Parsing
+```
+
+Parse un exemple de produit pour valider la qualité.
+
+### Utilisation Production
+
+```
+Menu > 📊 metadata > 🤖 AI Parsing (OpenAI Direct)
+```
+
+**Input:** Sheet "metadata creator"
+**Output:** Sheet "wp import new product"
+**Modèle:** GPT-4o (recommandé) ou GPT-4o-mini (économique)
+
+### Formats supportés
+
+Le parser extrait automatiquement:
+- ✅ **SKU** - Numéro catalogue
+- ✅ **Release Date** - Date de sortie
+- ✅ **Title** - Titre du produit
+- ✅ **Label** - Maison de disques
+- ✅ **Artists** (1-4) - Artistes multiples
+- ✅ **Genres** (1-4) - Genres musicaux
+- ✅ **Format** - Format physique (12" Vinyl, etc.)
+- ✅ **Description** - Description marketing
+- ✅ **Tracklist** - Liste des pistes
+
+### Coûts estimés
+
+| Modèle | Coût/produit | 100 produits | 1000 produits |
+|--------|-------------|--------------|---------------|
+| GPT-4o | ~$0.005 | $0.50 | $5.00 |
+| GPT-4o-mini | ~$0.001 | $0.10 | $1.00 |
+
+**Comparaison Make.com:**
+- Make.com: $40/mois (fixe)
+- OpenAI Direct: $5/mois (variable selon usage)
+- **Économie: $420/an**
+
+### Monitoring
+
+**Dashboard OpenAI:**
+```
+https://platform.openai.com/usage
+```
+
+Affiche:
+- Coûts en temps réel
+- Nombre de requêtes
+- Tokens utilisés
+- Erreurs éventuelles
+
+**Menu comparaison:**
+```
+Menu > 📊 metadata > 💰 Cost Comparison OpenAI vs Make.com
+```
+
+### Sécurité
+
+- ✅ **Clé API encryptée** - Stockage PropertiesService
+- ✅ **Validation format** - Vérifie que la clé commence par `sk-`
+- ✅ **Error handling** - Messages d'erreur sanitisés
+- ✅ **RGPD compliant** - Aucune donnée personnelle envoyée
+- ✅ **Rate limiting** - 1 seconde entre requêtes
+
+### Migration depuis Make.com
+
+**Phase 1: Tests (1-2 semaines)**
+- Lancer les 2 systèmes en parallèle
+- Comparer la qualité du parsing
+- Valider les résultats
+
+**Phase 2: Basculement (après validation)**
+- Utiliser OpenAI Direct comme système principal
+- Garder Make.com en backup
+
+**Phase 3: Désactivation Make.com (1 mois après)**
+- Désactiver le webhook Make.com
+- Économiser $35/mois
+
+### Support
+
+📖 **Guide complet:** [OPENAI-SETUP.md](./OPENAI-SETUP.md)
+📝 **Changelog:** [CHANGELOG.md](./CHANGELOG.md) (v1.1.0, v1.1.1)
+🚀 **Déploiement:** [DEPLOYMENT-GUIDE-v1.1.0.md](./DEPLOYMENT-GUIDE-v1.1.0.md)
 
 ---
 
