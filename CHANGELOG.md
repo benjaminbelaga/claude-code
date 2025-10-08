@@ -7,6 +7,65 @@ et ce projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [1.1.1] - 2025-10-08 🛡️
+
+### ✨ Ajouté - Safe Cohabitation Mode
+
+**🎯 Feature:** Mode test sécurisé OpenAI sans interférence avec Make.com
+
+#### Nouveau fichier: `metadata-parser-openai-direct-SAFE.js`
+- **🛡️ Zero-Risk Testing**: OpenAI et Make.com fonctionnent en parallèle
+- **📊 Separate Output Sheet**: "wp import new product (OpenAI Test)"
+- **🔍 Side-by-Side Comparison**: Validation qualité avant migration
+- **✅ Production Untouched**: Make.com continue à fonctionner normalement
+
+#### Pourquoi cette version?
+> "Je suis pas trop sûr que ton système marche alors que ça marchait comme avant pour make.com... Musialary l'utilise encore."
+
+La version SAFE permet:
+- ✅ Tester OpenAI SANS risque pour la production
+- ✅ Musialary continue à utiliser Make.com
+- ✅ Comparaison qualité côte-à-côte
+- ✅ Décision migration basée sur résultats réels
+
+#### Fonctionnalités SAFE
+- `parseMetadataDirectWithOpenAISafe()` - Parsing vers sheet de test
+- `compareOpenAIvsMakeCom()` - Fonction de comparaison
+- `setupOpenAIKeySafe()` - Configuration identique
+- `testSingleMetadataParsingSafe()` - Tests unitaires
+
+#### Menu intégration (main.js - Updated)
+- 🧪 **AI Parsing (OpenAI Test - SAFE)** - ⭐ NOUVEAU - Test sans risque
+- 🤖 **AI Parsing (Direct OpenAI)** - Production (quand validé)
+- 🤖 **AI Parsing (Legacy Make.com)** - Système actuel (Musialary)
+- 📊 **Compare OpenAI vs Make.com** - ⭐ NOUVEAU - Validation qualité
+
+#### Architecture Safe Cohabitation
+```
+Input:
+  "metadata creator" ← Même source pour les 2 systèmes
+
+Outputs (SÉPARÉS):
+  Make.com → "wp import new product" (production actuelle)
+  OpenAI → "wp import new product (OpenAI Test)" (test isolé)
+
+Comparison:
+  Fonction compare() pour validation qualité
+```
+
+#### Migration Path Updated
+- **Phase 1 (Maintenant)**: Tests parallèles avec sheet séparée
+- **Phase 2 (Après validation)**: Switch vers OpenAI production
+- **Phase 3 (Après 1 mois)**: Désactivation Make.com si qualité confirmée
+
+### 🔒 Garanties de Sécurité
+- ✅ Make.com workflow: **0 modifications**
+- ✅ Production sheet: **0 risque**
+- ✅ Musialary workflow: **Complètement préservé**
+- ✅ Rollback: **Instantané** (juste supprimer la test sheet)
+
+---
+
 ## [1.1.0] - 2025-10-08 🤖
 
 ### ✨ Ajouté - Metadata Parsing Direct OpenAI
