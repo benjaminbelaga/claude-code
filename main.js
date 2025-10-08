@@ -4,16 +4,14 @@ function onOpen() {
   
   // --- Tool & Utility Menus ---
   const metadataMenu = ui.createMenu('📊 metadata');
-  metadataMenu.addItem('🧪 AI Parsing (OpenAI Test - SAFE)', 'parseMetadataDirectWithOpenAISafe');
-  metadataMenu.addItem('🤖 AI Parsing (Direct OpenAI)', 'parseMetadataDirectWithOpenAI');
-  metadataMenu.addItem('🤖 AI Parsing (Legacy Make.com)', 'triggerAIParsing');
-  metadataMenu.addSeparator();
-  metadataMenu.addItem('📊 Compare OpenAI vs Make.com', 'compareOpenAIvsMakeCom');
+  metadataMenu.addItem('🤖 AI Parsing (OpenAI Direct)', 'parseMetadataDirectWithOpenAISafe');
+  metadataMenu.addItem('🤖 AI Parsing (Make.com)', 'triggerAIParsing');
   metadataMenu.addSeparator();
   metadataMenu.addItem('⚙️ Setup OpenAI API Key', 'setupOpenAIKeySafe');
   metadataMenu.addItem('🧪 Test OpenAI Connection', 'testOpenAIConnection');
   metadataMenu.addItem('🧪 Test Single Row Parsing', 'testSingleMetadataParsingSafe');
-  metadataMenu.addItem('💰 Show Cost Comparison', 'showCostComparison');
+  metadataMenu.addSeparator();
+  metadataMenu.addItem('💰 Cost Comparison OpenAI vs Make.com', 'compareOpenAIvsMakeCom');
   metadataMenu.addSeparator();
   metadataMenu.addItem('Run metadata corrector', 'runSmartValidator');
   metadataMenu.addItem('Update metadata', 'updateMetadata');
