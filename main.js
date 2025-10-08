@@ -4,7 +4,13 @@ function onOpen() {
   
   // --- Tool & Utility Menus ---
   const metadataMenu = ui.createMenu('📊 metadata');
-  metadataMenu.addItem('🤖 AI Parsing', 'triggerAIParsing');
+  metadataMenu.addItem('🤖 AI Parsing (Direct OpenAI - NEW)', 'parseMetadataDirectWithOpenAI');
+  metadataMenu.addItem('🤖 AI Parsing (Legacy Make.com)', 'triggerAIParsing');
+  metadataMenu.addSeparator();
+  metadataMenu.addItem('⚙️ Setup OpenAI API Key', 'setupOpenAIKey');
+  metadataMenu.addItem('🧪 Test OpenAI Connection', 'testOpenAIConnection');
+  metadataMenu.addItem('🧪 Test Single Row Parsing', 'testSingleMetadataParsing');
+  metadataMenu.addItem('💰 Show Cost Comparison', 'showCostComparison');
   metadataMenu.addSeparator();
   metadataMenu.addItem('Run metadata corrector', 'runSmartValidator');
   metadataMenu.addItem('Update metadata', 'updateMetadata');
