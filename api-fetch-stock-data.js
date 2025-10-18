@@ -71,11 +71,14 @@ function fetchDataAPIUpdateStock() {
     const totalPreordersCol = 20; // U: Total Preorders (column 21 = index 20)
     const imageUrlCol = 25;    // Z: Image URL (column 26 = index 25)
 
-    // API Configuration
-    const API_BASE = 'https://www.yoyaku.io/wp-json/wc/v3';
-    const API_KEY = 'ck_f66f25feeabe4c509dcbc0a41d1b4379f5f4ab74';
-    const API_SECRET = 'cs_6a23c0ec55570d2f51d0abf11e83a8e81d1d789b';
-    const authHeader = 'Basic ' + Utilities.base64Encode(API_KEY + ':' + API_SECRET);
+    // NEW: Custom YOYAKU API Endpoint (no authentication needed!)
+    const API_BASE = 'https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data';
+
+    // OLD WooCommerce API (commented for reference)
+    // const API_BASE = 'https://www.yoyaku.io/wp-json/wc/v3';
+    // const API_KEY = 'ck_f66f25feeabe4c509dcbc0a41d1b4379f5f4ab74';
+    // const API_SECRET = 'cs_6a23c0ec55570d2f51d0abf11e83a8e81d1d789b';
+    // const authHeader = 'Basic ' + Utilities.base64Encode(API_KEY + ':' + API_SECRET);
 
     // Process each row
     let successCount = 0;
@@ -91,78 +94,44 @@ function fetchDataAPIUpdateStock() {
       }
 
       try {
-        // Search product by SKU
-        const searchUrl = `${API_BASE}/products?sku=${encodeURIComponent(sku.toString().trim())}`;
+        // NEW: Call custom YOYAKU endpoint (no auth needed!)
+        const searchUrl = `${API_BASE}/${encodeURIComponent(sku.toString().trim())}`;
         const searchOptions = {
           method: 'get',
           headers: {
-            'Authorization': authHeader,
             'Content-Type': 'application/json'
           },
           muteHttpExceptions: true
         };
 
         const searchResponse = UrlFetchApp.fetch(searchUrl, searchOptions);
-        const searchData = JSON.parse(searchResponse.getContentText());
+        const product = JSON.parse(searchResponse.getContentText());
 
-        if (searchData.length === 0) {
+        // Check if product was found
+        if (!product || product.found === false || product.error) {
           errorCount++;
           errorDetails.push({
             row: i + 1,
             sku: sku,
-            error: 'Product not found'
+            error: product.error || 'Product not found'
           });
           continue;
         }
 
-        const product = searchData[0];
+        // NEW: Direct extraction from custom endpoint (already clean format!)
+        const imageUrl = product.image_url || '';
+        const stockQuantity = product.stock_quantity || 0;
+        const stockStatus = product.stock_status || 'outofstock';
+        const depotVente = product.depot_vente || '';
+        const initialQty = product.initial_quantity || '';
+        const shelfQty = product.shelf_quantity || '';
+        const totalPreorders = product.total_preorders || '';
 
-        // IMPORTANT: Extract data safely with fallbacks - no crashes if undefined
-        let imageUrl = '';
-        let stockQuantity = 0;
-        let stockStatus = 'outofstock';
-        let depotVente = '';
-        let initialQty = '';
-        let shelfQty = '';
-        let totalPreorders = '';
-
-        // Safe extraction - each field independently checked
-        try {
-          if (product && product.images && product.images.length > 0) {
-            imageUrl = product.images[0].src || '';
-            Logger.log(`✅ SKU ${sku}: Found image URL: ${imageUrl}`);
-          } else {
-            Logger.log(`⚠️ SKU ${sku}: No images in WooCommerce API response`);
-            // Log only if product exists
-            if (product) {
-              const productStr = JSON.stringify(product);
-              if (productStr && productStr.length > 0) {
-                Logger.log(`⚠️ Product sample: ${productStr.substring(0, 300)}`);
-              }
-            } else {
-              Logger.log(`❌ SKU ${sku}: Product object is null/undefined`);
-            }
-          }
-        } catch (e) {
-          Logger.log(`❌ Image error for SKU ${sku}: ${e.message}`);
-        }
-
-        try {
-          stockQuantity = product && product.stock_quantity !== undefined ? product.stock_quantity : 0;
-          stockStatus = product && product.stock_status ? product.stock_status : 'outofstock';
-        } catch (e) {
-          Logger.log(`⚠️ Stock extraction error for SKU ${sku}: ${e.message}`);
-        }
-
-        try {
-          if (product && product.meta_data) {
-            depotVente = getMetaValue(product.meta_data, '_depot_vente') || '';
-            initialQty = getMetaValue(product.meta_data, '_initial_quantity') || '';
-            shelfQty = getMetaValue(product.meta_data, 'yid_total_shelf') || '';
-            totalPreorders = getMetaValue(product.meta_data, '_total_preorders') || '';
-          }
-        } catch (e) {
-          Logger.log(`⚠️ Custom fields extraction error for SKU ${sku}: ${e.message}`);
+        // Log success
+        if (imageUrl) {
+          Logger.log(`✅ SKU ${sku}: Image URL found: ${imageUrl}`);
+        } else {
+          Logger.log(`⚠️ SKU ${sku}: No image URL in custom endpoint response`);
         }
 
         // Write data to sheet - BATCH WRITE for speed
@@ -242,15 +211,5 @@ function fetchDataAPIUpdateStock() {
   }
 }
 
-/**
- * Helper function to get meta value from product meta_data array
- * @param {Array} metaData - Array of meta_data objects from WooCommerce API
- * @param {string} key - Meta key to search for
- * @returns {string} - Meta value or empty string if not found
- */
-function getMetaValue(metaData, key) {
-  if (!metaData || !Array.isArray(metaData)) return '';
-
-  const meta = metaData.find(m => m.key === key);
-  return meta ? meta.value : '';
-}
+// Helper function getMetaValue() removed - no longer needed!
+// Custom endpoint returns clean data directly
