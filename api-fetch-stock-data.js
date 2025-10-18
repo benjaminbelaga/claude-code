@@ -130,9 +130,13 @@ function fetchDataAPIUpdateStock() {
         try {
           if (product && product.images && product.images.length > 0) {
             imageUrl = product.images[0].src || '';
+            Logger.log(`✅ SKU ${sku}: Found image URL: ${imageUrl}`);
+          } else {
+            Logger.log(`⚠️ SKU ${sku}: No images found in product data`);
+            Logger.log(`⚠️ Product data: ${JSON.stringify(product).substring(0, 500)}`);
           }
         } catch (e) {
-          Logger.log(`⚠️ Image extraction error for SKU ${sku}: ${e.message}`);
+          Logger.log(`❌ Image extraction error for SKU ${sku}: ${e.message}`);
         }
 
         try {
@@ -153,7 +157,7 @@ function fetchDataAPIUpdateStock() {
           Logger.log(`⚠️ Custom fields extraction error for SKU ${sku}: ${e.message}`);
         }
 
-        // Write data to sheet - ALWAYS write, even if some fields are empty
+        // Write data to sheet - BATCH WRITE for speed
         const rowIndex = i + 1; // 1-based row index
 
         // Z: Image URL (raw URL)
@@ -194,8 +198,8 @@ function fetchDataAPIUpdateStock() {
           );
         }
 
-        // Rate limiting - 1 second between requests
-        Utilities.sleep(1000);
+        // REMOVED: No sleep needed for GET requests (read-only operations)
+        // Utilities.sleep(1000);
 
       } catch (error) {
         errorCount++;
