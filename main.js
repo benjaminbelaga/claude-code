@@ -34,15 +34,11 @@ function onOpen() {
   yydMenu.addItem('Import products', 'runYYDImport');
   menu.addSubMenu(yydMenu);
 
-  const barcelonaMenu = ui.createMenu('🏬 BARCELONA Tools');
-  barcelonaMenu.addItem('Import products', 'runBarcelonaImport');
-  menu.addSubMenu(barcelonaMenu);
-  
-  // NEW API Direct Menu (Fast & Reliable)
-  const apiDirectMenu = ui.createMenu('⚡ Update Tools (API Direct NEW)');
+  // NEW API Direct Menu (Fast & Reliable) - RENAMED
+  const apiDirectMenu = ui.createMenu('⚡ Update Stock');
 
   // Fetch Data Function (NEW - Top Priority)
-  apiDirectMenu.addItem('📊 Fetch Data API update stock', 'fetchDataAPIUpdateStock');
+  apiDirectMenu.addItem('📊 Fetch Data API update stock (Direct API)', 'fetchDataAPIUpdateStock');
   apiDirectMenu.addSeparator();
 
   // Phase 1 Functions (Existing)
@@ -71,7 +67,11 @@ function onOpen() {
   apiDirectMenu.addItem('🧪 Test Stock Update', 'testStockUpdate');
   apiDirectMenu.addItem('🧪 Test Release Date Update', 'testReleaseDateUpdate');
   menu.addSubMenu(apiDirectMenu);
-  
+
+  const barcelonaMenu = ui.createMenu('🏬 BARCELONA Tools');
+  barcelonaMenu.addItem('Import products', 'runBarcelonaImport');
+  menu.addSubMenu(barcelonaMenu);
+
   // Legacy Update Menu (Keep for transition)
   const updateMenu = ui.createMenu('🔄 Update Tools (Legacy)');
   updateMenu.addItem('Update Yoyaku.io Stock', 'runYoyakuStockUpdate');

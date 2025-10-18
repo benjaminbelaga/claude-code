@@ -132,11 +132,19 @@ function fetchDataAPIUpdateStock() {
             imageUrl = product.images[0].src || '';
             Logger.log(`✅ SKU ${sku}: Found image URL: ${imageUrl}`);
           } else {
-            Logger.log(`⚠️ SKU ${sku}: No images found in product data`);
-            Logger.log(`⚠️ Product data: ${JSON.stringify(product).substring(0, 500)}`);
+            Logger.log(`⚠️ SKU ${sku}: No images in WooCommerce API response`);
+            // Log only if product exists
+            if (product) {
+              const productStr = JSON.stringify(product);
+              if (productStr && productStr.length > 0) {
+                Logger.log(`⚠️ Product sample: ${productStr.substring(0, 300)}`);
+              }
+            } else {
+              Logger.log(`❌ SKU ${sku}: Product object is null/undefined`);
+            }
           }
         } catch (e) {
-          Logger.log(`❌ Image extraction error for SKU ${sku}: ${e.message}`);
+          Logger.log(`❌ Image error for SKU ${sku}: ${e.message}`);
         }
 
         try {
