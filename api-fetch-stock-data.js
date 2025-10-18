@@ -16,6 +16,7 @@
  * - J: Initial Quantity Origin (_initial_quantity custom field)
  * - K: Stock Status (stock_status)
  * - T: Quantity Shelf (yid_total_shelf custom field)
+ * - U: Total Preorders (_total_preorders custom field - HPOS real-time calculation)
  */
 function fetchDataAPIUpdateStock() {
   const ui = SpreadsheetApp.getUi();
@@ -36,7 +37,8 @@ function fetchDataAPIUpdateStock() {
     '• Stock Status\n' +
     '• Depot Vente\n' +
     '• Initial Quantity\n' +
-    '• Quantity Shelf\n\n' +
+    '• Quantity Shelf\n' +
+    '• Total Preorders\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -65,6 +67,7 @@ function fetchDataAPIUpdateStock() {
     const initialQtyCol = 9;   // J: Initial Quantity Origin
     const stockStatusCol = 10; // K: Stock Status
     const shelfQtyCol = 19;    // T: Quantity Shelf (column 20 = index 19)
+    const totalPreordersCol = 20; // U: Total Preorders (column 21 = index 20)
 
     // API Configuration
     const API_BASE = 'https://www.yoyaku.io/wp-json/wc/v3';
@@ -121,6 +124,7 @@ function fetchDataAPIUpdateStock() {
         const depotVente = getMetaValue(product.meta_data, '_depot_vente') || '';
         const initialQty = getMetaValue(product.meta_data, '_initial_quantity') || '';
         const shelfQty = getMetaValue(product.meta_data, 'yid_total_shelf') || '';
+        const totalPreorders = getMetaValue(product.meta_data, '_total_preorders') || '';
 
         // Write data to sheet
         const rowIndex = i + 1; // 1-based row index
@@ -144,6 +148,9 @@ function fetchDataAPIUpdateStock() {
 
         // T: Quantity Shelf
         sheet.getRange(rowIndex, shelfQtyCol + 1).setValue(shelfQty);
+
+        // U: Total Preorders
+        sheet.getRange(rowIndex, totalPreordersCol + 1).setValue(totalPreorders);
 
         successCount++;
 
