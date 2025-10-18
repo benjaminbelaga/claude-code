@@ -10,13 +10,14 @@
  * Populates sheet "update stock" with live product data
  *
  * Columns populated:
- * - A: Image (=IMAGE formula)
+ * - A: Image (=IMAGE(Z) formula)
  * - G: Depot Vente (_depot_vente custom field)
  * - H: Current Stock (stock_quantity)
  * - J: Initial Quantity Origin (_initial_quantity custom field)
  * - K: Stock Status (stock_status)
  * - T: Quantity Shelf (yid_total_shelf custom field)
  * - U: Total Preorders (_total_preorders custom field - HPOS real-time calculation)
+ * - Z: Image URL (raw URL from WooCommerce API)
  */
 function fetchDataAPIUpdateStock() {
   const ui = SpreadsheetApp.getUi();
@@ -61,13 +62,14 @@ function fetchDataAPIUpdateStock() {
     }
 
     // Column indices for data population
-    const imageCol = 0;        // A: Image
+    const imageCol = 0;        // A: Image formula =IMAGE(Z)
     const depotVenteCol = 6;   // G: Depot Vente
     const currentStockCol = 7; // H: Current Stock
     const initialQtyCol = 9;   // J: Initial Quantity Origin
     const stockStatusCol = 10; // K: Stock Status
     const shelfQtyCol = 19;    // T: Quantity Shelf (column 20 = index 19)
     const totalPreordersCol = 20; // U: Total Preorders (column 21 = index 20)
+    const imageUrlCol = 25;    // Z: Image URL (column 26 = index 25)
 
     // API Configuration
     const API_BASE = 'https://www.yoyaku.io/wp-json/wc/v3';
@@ -115,23 +117,52 @@ function fetchDataAPIUpdateStock() {
 
         const product = searchData[0];
 
-        // Extract data
-        const imageUrl = product.images && product.images.length > 0 ? product.images[0].src : '';
-        const stockQuantity = product.stock_quantity || 0;
-        const stockStatus = product.stock_status || 'outofstock';
+        // IMPORTANT: Extract data safely with fallbacks - no crashes if undefined
+        let imageUrl = '';
+        let stockQuantity = 0;
+        let stockStatus = 'outofstock';
+        let depotVente = '';
+        let initialQty = '';
+        let shelfQty = '';
+        let totalPreorders = '';
 
-        // Extract custom fields
-        const depotVente = getMetaValue(product.meta_data, '_depot_vente') || '';
-        const initialQty = getMetaValue(product.meta_data, '_initial_quantity') || '';
-        const shelfQty = getMetaValue(product.meta_data, 'yid_total_shelf') || '';
-        const totalPreorders = getMetaValue(product.meta_data, '_total_preorders') || '';
+        // Safe extraction - each field independently checked
+        try {
+          if (product && product.images && product.images.length > 0) {
+            imageUrl = product.images[0].src || '';
+          }
+        } catch (e) {
+          Logger.log(`⚠️ Image extraction error for SKU ${sku}: ${e.message}`);
+        }
 
-        // Write data to sheet
+        try {
+          stockQuantity = product && product.stock_quantity !== undefined ? product.stock_quantity : 0;
+          stockStatus = product && product.stock_status ? product.stock_status : 'outofstock';
+        } catch (e) {
+          Logger.log(`⚠️ Stock extraction error for SKU ${sku}: ${e.message}`);
+        }
+
+        try {
+          if (product && product.meta_data) {
+            depotVente = getMetaValue(product.meta_data, '_depot_vente') || '';
+            initialQty = getMetaValue(product.meta_data, '_initial_quantity') || '';
+            shelfQty = getMetaValue(product.meta_data, 'yid_total_shelf') || '';
+            totalPreorders = getMetaValue(product.meta_data, '_total_preorders') || '';
+          }
+        } catch (e) {
+          Logger.log(`⚠️ Custom fields extraction error for SKU ${sku}: ${e.message}`);
+        }
+
+        // Write data to sheet - ALWAYS write, even if some fields are empty
         const rowIndex = i + 1; // 1-based row index
 
-        // A: Image formula
+        // Z: Image URL (raw URL)
+        sheet.getRange(rowIndex, imageUrlCol + 1).setValue(imageUrl);
+
+        // A: Image formula =IMAGE(Z)
         if (imageUrl) {
-          sheet.getRange(rowIndex, imageCol + 1).setFormula(`=IMAGE("${imageUrl}")`);
+          const imageFormulaCell = `Z${rowIndex}`;
+          sheet.getRange(rowIndex, imageCol + 1).setFormula(`=IMAGE(${imageFormulaCell})`);
         }
 
         // G: Depot Vente
