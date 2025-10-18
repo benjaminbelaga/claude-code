@@ -1,0 +1,206 @@
+// ============================================
+// 📊 FETCH DATA API - Update Stock Sheet
+// ============================================
+// Retrieves current product data from WooCommerce API
+// and populates the "update stock" sheet with live data
+// ============================================
+
+/**
+ * Fetch current stock data from WooCommerce API
+ * Populates sheet "update stock" with live product data
+ *
+ * Columns populated:
+ * - A: Image (=IMAGE formula)
+ * - G: Depot Vente (_depot_vente custom field)
+ * - H: Current Stock (stock_quantity)
+ * - J: Initial Quantity Origin (_initial_quantity custom field)
+ * - K: Stock Status (stock_status)
+ * - T: Quantity Shelf (yid_total_shelf custom field)
+ */
+function fetchDataAPIUpdateStock() {
+  const ui = SpreadsheetApp.getUi();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('update stock');
+
+  if (!sheet) {
+    ui.alert('❌ Error', 'Sheet "update stock" not found!', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Confirm action
+  const result = ui.alert(
+    '📊 Fetch Data from WooCommerce API',
+    'This will fetch current product data from YOYAKU.IO and populate the sheet.\n\n' +
+    '✅ Data retrieved:\n' +
+    '• Product Image\n' +
+    '• Current Stock\n' +
+    '• Stock Status\n' +
+    '• Depot Vente\n' +
+    '• Initial Quantity\n' +
+    '• Quantity Shelf\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (result !== ui.Button.YES) return;
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('🔄 Fetching product data...', 'Processing', -1);
+
+  try {
+    // Get sheet data
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Find column indices
+    const skuIndex = headers.findIndex(h => h.toString().toUpperCase() === 'SKU');
+
+    if (skuIndex === -1) {
+      ui.alert('❌ Error', 'SKU column not found!', ui.ButtonSet.OK);
+      return;
+    }
+
+    // Column indices for data population
+    const imageCol = 0;        // A: Image
+    const depotVenteCol = 6;   // G: Depot Vente
+    const currentStockCol = 7; // H: Current Stock
+    const initialQtyCol = 9;   // J: Initial Quantity Origin
+    const stockStatusCol = 10; // K: Stock Status
+    const shelfQtyCol = 19;    // T: Quantity Shelf (column 20 = index 19)
+
+    // API Configuration
+    const API_BASE = 'https://www.yoyaku.io/wp-json/wc/v3';
+    const API_KEY = 'ck_f66f25feeabe4c509dcbc0a41d1b4379f5f4ab74';
+    const API_SECRET = 'cs_6a23c0ec55570d2f51d0abf11e83a8e81d1d789b';
+    const authHeader = 'Basic ' + Utilities.base64Encode(API_KEY + ':' + API_SECRET);
+
+    // Process each row
+    let successCount = 0;
+    let errorCount = 0;
+    const errorDetails = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const sku = data[i][skuIndex];
+
+      // Skip empty SKUs
+      if (!sku || sku === '' || sku === '#N/A' || sku.toString().trim() === '') {
+        continue;
+      }
+
+      try {
+        // Search product by SKU
+        const searchUrl = `${API_BASE}/products?sku=${encodeURIComponent(sku.toString().trim())}`;
+        const searchOptions = {
+          method: 'get',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json'
+          },
+          muteHttpExceptions: true
+        };
+
+        const searchResponse = UrlFetchApp.fetch(searchUrl, searchOptions);
+        const searchData = JSON.parse(searchResponse.getContentText());
+
+        if (searchData.length === 0) {
+          errorCount++;
+          errorDetails.push({
+            row: i + 1,
+            sku: sku,
+            error: 'Product not found'
+          });
+          continue;
+        }
+
+        const product = searchData[0];
+
+        // Extract data
+        const imageUrl = product.images && product.images.length > 0 ? product.images[0].src : '';
+        const stockQuantity = product.stock_quantity || 0;
+        const stockStatus = product.stock_status || 'outofstock';
+
+        // Extract custom fields
+        const depotVente = getMetaValue(product.meta_data, '_depot_vente') || '';
+        const initialQty = getMetaValue(product.meta_data, '_initial_quantity') || '';
+        const shelfQty = getMetaValue(product.meta_data, 'yid_total_shelf') || '';
+
+        // Write data to sheet
+        const rowIndex = i + 1; // 1-based row index
+
+        // A: Image formula
+        if (imageUrl) {
+          sheet.getRange(rowIndex, imageCol + 1).setFormula(`=IMAGE("${imageUrl}")`);
+        }
+
+        // G: Depot Vente
+        sheet.getRange(rowIndex, depotVenteCol + 1).setValue(depotVente);
+
+        // H: Current Stock
+        sheet.getRange(rowIndex, currentStockCol + 1).setValue(stockQuantity);
+
+        // J: Initial Quantity Origin
+        sheet.getRange(rowIndex, initialQtyCol + 1).setValue(initialQty);
+
+        // K: Stock Status
+        sheet.getRange(rowIndex, stockStatusCol + 1).setValue(stockStatus);
+
+        // T: Quantity Shelf
+        sheet.getRange(rowIndex, shelfQtyCol + 1).setValue(shelfQty);
+
+        successCount++;
+
+        // Progress update every 10 products
+        if (successCount % 10 === 0) {
+          SpreadsheetApp.getActiveSpreadsheet().toast(
+            `✅ Processed ${successCount} products...`,
+            'Progress',
+            3
+          );
+        }
+
+        // Rate limiting - 1 second between requests
+        Utilities.sleep(1000);
+
+      } catch (error) {
+        errorCount++;
+        errorDetails.push({
+          row: i + 1,
+          sku: sku,
+          error: error.message
+        });
+        Logger.log(`❌ Error fetching SKU ${sku}: ${error.message}`);
+      }
+    }
+
+    // Final report
+    let reportMessage = `✅ Data fetch complete!\n\n`;
+    reportMessage += `📊 Results:\n`;
+    reportMessage += `• Success: ${successCount} products\n`;
+    reportMessage += `• Errors: ${errorCount} products\n\n`;
+
+    if (errorDetails.length > 0) {
+      reportMessage += `❌ Errors:\n`;
+      errorDetails.forEach(err => {
+        reportMessage += `• Row ${err.row} (${err.sku}): ${err.error}\n`;
+      });
+    }
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Fetch complete!', 'Success', 5);
+    ui.alert('📊 Fetch Data Complete', reportMessage, ui.ButtonSet.OK);
+
+  } catch (error) {
+    Logger.log(`❌ Fatal error: ${error.message}`);
+    ui.alert('❌ Error', `Fatal error: ${error.message}`, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Helper function to get meta value from product meta_data array
+ * @param {Array} metaData - Array of meta_data objects from WooCommerce API
+ * @param {string} key - Meta key to search for
+ * @returns {string} - Meta value or empty string if not found
+ */
+function getMetaValue(metaData, key) {
+  if (!metaData || !Array.isArray(metaData)) return '';
+
+  const meta = metaData.find(m => m.key === key);
+  return meta ? meta.value : '';
+}

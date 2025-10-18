@@ -40,7 +40,11 @@ function onOpen() {
   
   // NEW API Direct Menu (Fast & Reliable)
   const apiDirectMenu = ui.createMenu('⚡ Update Tools (API Direct NEW)');
-  
+
+  // Fetch Data Function (NEW - Top Priority)
+  apiDirectMenu.addItem('📊 Fetch Data API update stock', 'fetchDataAPIUpdateStock');
+  apiDirectMenu.addSeparator();
+
   // Phase 1 Functions (Existing)
   apiDirectMenu.addItem('🚀 Update Picking (Direct API)', 'updatePickingDirectAPI');
   apiDirectMenu.addSeparator();
