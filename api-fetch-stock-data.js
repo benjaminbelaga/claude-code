@@ -15,7 +15,7 @@
  * - H: Current Stock (stock_quantity)
  * - J: Initial Quantity Origin (_initial_quantity custom field)
  * - K: Stock Status (stock_status)
- * - T: Quantity Shelf (yid_total_shelf custom field)
+ * - T: Quantity Shelf (_yyd_shelf_count custom field)
  * - U: Total Preorders (_total_preorders custom field - HPOS real-time calculation)
  * - Z: Image URL (raw URL from WooCommerce API)
  */
