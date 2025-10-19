@@ -15,6 +15,7 @@
  * - H: Current Stock (stock_quantity)
  * - J: Initial Quantity Origin (_initial_quantity custom field)
  * - K: Stock Status (stock_status)
+ * - O: Online Status (is_online - "online" or "not online", red if not online)
  * - T: Quantity Shelf (_yyd_shelf_count custom field)
  * - U: Total Preorders (_total_preorders custom field - HPOS real-time calculation)
  * - Z: Image URL (raw URL from WooCommerce API)
@@ -36,6 +37,7 @@ function fetchDataAPIUpdateStock() {
     '• Product Image\n' +
     '• Current Stock\n' +
     '• Stock Status\n' +
+    '• Online Status (red if not online)\n' +
     '• Depot Vente\n' +
     '• Initial Quantity\n' +
     '• Quantity Shelf\n' +
@@ -67,6 +69,7 @@ function fetchDataAPIUpdateStock() {
     const currentStockCol = 7; // H: Current Stock
     const initialQtyCol = 9;   // J: Initial Quantity Origin
     const stockStatusCol = 10; // K: Stock Status
+    const onlineStatusCol = 14; // O: Online Status (column 15 = index 14)
     const shelfQtyCol = 19;    // T: Quantity Shelf (column 20 = index 19)
     const totalPreordersCol = 20; // U: Total Preorders (column 21 = index 20)
     const imageUrlCol = 25;    // Z: Image URL (column 26 = index 25)
@@ -124,6 +127,8 @@ function fetchDataAPIUpdateStock() {
         const stockStatus = product.stock_status || 'outofstock';
         const depotVente = product.depot_vente || '';
         const initialQty = product.initial_quantity || '';
+        const isOnline = product.is_online || false;
+        const onlineStatus = isOnline ? 'online' : 'not online';
         const shelfQty = product.shelf_quantity || '';
         const totalPreorders = product.total_preorders || '';
 
@@ -157,6 +162,19 @@ function fetchDataAPIUpdateStock() {
 
         // K: Stock Status
         sheet.getRange(rowIndex, stockStatusCol + 1).setValue(stockStatus);
+
+        // O: Online Status (with conditional formatting)
+        const onlineCell = sheet.getRange(rowIndex, onlineStatusCol + 1);
+        onlineCell.setValue(onlineStatus);
+        if (!isOnline) {
+          // Set background to red for "not online"
+          onlineCell.setBackground('#ff0000');
+          onlineCell.setFontColor('#ffffff'); // White text for readability
+        } else {
+          // Clear formatting for "online"
+          onlineCell.setBackground(null);
+          onlineCell.setFontColor(null);
+        }
 
         // T: Quantity Shelf
         sheet.getRange(rowIndex, shelfQtyCol + 1).setValue(shelfQty);
