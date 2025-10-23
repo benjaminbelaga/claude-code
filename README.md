@@ -1,6 +1,6 @@
 # 🚀 WP Import Dashboard - Direct API Edition
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 [![Status](https://img.shields.io/badge/status-production--ready-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 [![Performance](https://img.shields.io/badge/performance-20x_faster-orange.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
 [![OpenAI](https://img.shields.io/badge/OpenAI-Direct_API-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
@@ -30,38 +30,75 @@
 
 ---
 
-## 🆕 What's New - v1.1.1
+## 🆕 What's New - v1.2.0
 
-### 🤖 Direct OpenAI Metadata Parser (October 2025)
+### 🎵 Distributor Music Auto-Fetch (October 2025)
 
-**Élimination complète de Make.com** - Parsing de métadonnées maintenant 100% intégré dans Google Apps Script.
+**Automatic taxonomy extraction from API** - Column B now auto-populated with distributor information from WordPress taxonomies.
 
-#### Avant vs Après
+#### Webmaster v2.0 Workflow Enhancement
 
-| Métrique | Make.com (Ancien) | OpenAI Direct (Nouveau) | Gain |
-|----------|-------------------|------------------------|------|
-| **Coût mensuel** | $36-40 | ~$5 | **-87%** |
-| **Coût annuel** | ~$432-480 | ~$60 | **$420 économisés** |
-| **Vitesse** | 3-5s/produit | 1-2s/produit | **3x plus rapide** |
-| **Latence réseau** | 3 hops | 1 hop | **-67%** |
-| **Debugging** | Complexe | Simple | **Énorme** |
+- ✅ **Column B: Distributor Music** - Auto-fetched from `distributormusic` taxonomy
+- ✅ **Zero Manual Input** - No more typing distributor names manually
+- ✅ **API Integration** - Uses yoyaku-api-connector v1.4.2 endpoint
+- ✅ **Clean Workflow Updated** - Preserves only columns C, D (B fetched from API)
 
-#### Features
+#### Column Mapping (Webmaster v2.0)
 
-- ✅ **API OpenAI directe** - Aucun intermédiaire
-- ✅ **Sécurité PropertiesService** - Clé API encryptée
-- ✅ **Menu intégré** - Setup en 2 minutes
-- ✅ **Tests unitaires** - Validation avant production
-- ✅ **Cost monitoring** - Dashboard économies temps réel
-- ✅ **Support GPT-4o & GPT-4o-mini** - Optimisation coûts
+| Column | Field | Source | Example | Description |
+|--------|-------|--------|---------|-------------|
+| **A** | Image | API | `=IMAGE(Z)` | Product thumbnail (formula) |
+| **B** | Distributor Music | API (taxonomy) | `yydistribution`, `clone` | Auto-fetched from `distributormusic` taxonomy |
+| **C** | SKU | Manual | `YOYAKU012` | Product SKU (preserved on clear) |
+| **D** | New Order Quantity | Manual | `50` | Quantity to order (preserved on clear) |
+| **G** | Depot Vente | API | `yes`, `no` | Depot vente status |
+| **H** | Current Stock | API | `12`, `0` | Current stock (negative protected) |
+| **J** | Initial Quantity Origin | API | `10` | Initial quantity before order |
+| **K** | Stock Status | API | `instock`, `outofstock` | WooCommerce stock status |
+| **O** | Online Status | API | `online`, `not online` | Publication status (red if offline) |
+| **T** | Quantity Shelf | API | `24` | Physical quantity on shelf (_total_shelves) |
+| **U** | Total Preorders | API | `28` | Total preorders count |
+| **Z** | Image URL | API | `https://...` | Raw image URL |
 
-#### Quick Start
+#### API Endpoint
+
+**Powered by:** [yoyaku-api-connector v1.4.2](https://github.com/benjaminbelaga/yoyaku-api-connector)
+
+```http
+GET https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data/{SKU}
+```
+
+Response includes `distributor_music` field:
+```json
+{
+  "sku": "YOYAKU012",
+  "distributor_music": "yydistribution",
+  "stock_quantity": -67,
+  "shelf_quantity": "24",
+  ...
+}
+```
+
+#### Quick Start (3-Click Workflow)
 
 ```
-1. Menu > 📊 metadata > ⚙️ Setup OpenAI API Key
-2. Menu > 📊 metadata > 🧪 Test Single Row Parsing
-3. Menu > 📊 metadata > 🤖 AI Parsing (OpenAI Direct)
+1. Menu > ⚡ Update Stock > 🧹 Clear Calculated Data
+   → Clears everything except columns C, D
+
+2. Menu > ⚡ Update Stock > 📊 Fetch Data & Calculate
+   → Fetches ALL data from API (including column B)
+
+3. Menu > ⚡ Update Stock > 📦 Update Stock YOYAKU v2.0
+   → Pushes updates to WooCommerce
 ```
+
+📖 **Guide complet:** [WEBMASTER-GUIDE-SIMPLE.md](./WEBMASTER-GUIDE-SIMPLE.md)
+
+---
+
+### 🤖 Previous: Direct OpenAI Metadata Parser (v1.1.1)
+
+**Élimination complète de Make.com** - Économie de $420/an avec API directe OpenAI.
 
 📖 **Guide complet:** [OPENAI-SETUP.md](./OPENAI-SETUP.md)
 

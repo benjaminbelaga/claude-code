@@ -7,6 +7,55 @@ et ce projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [1.2.0] - 2025-10-23 🎵
+
+### ✨ Ajouté - Distributor Music Auto-Fetch
+
+**🎯 Feature:** Automatic distributor taxonomy extraction from API to column B
+
+#### Webmaster v2.0 Workflow Enhanced
+- **🎵 Column B: Distributor Music**: Auto-populated from `distributormusic` taxonomy
+- **📊 API Integration**: Fetches taxonomy term name (e.g., "yydistribution", "clone")
+- **🧹 Clear Data Updated**: Preserves only columns C, D (B now fetched from API)
+- **⚡ Zero Manual Input**: Distributor info synchronized automatically
+
+#### API Endpoint Integration
+- **yoyaku-api-connector v1.4.2**: Added `distributor_music` field to API response
+- **Taxonomy Support**: Reads WordPress `distributormusic` taxonomy terms
+- **Clean Data Format**: Returns first term name as string
+
+#### Technical Details
+- `fetchDataAndCalculateFromAPI()`: Now extracts `distributor_music` from API
+- `clearCalculatedData()`: Preserves C, D only (B cleared for fresh API fetch)
+- API Response: `"distributor_music": "yydistribution"` ✅
+- Column Mapping: B = Distributor Music (auto-fetched)
+
+#### Example Products Tested
+- ✅ YOYAKU012 → `"yydistribution"`
+- ✅ DWLD007 → `"clone"`
+
+#### Deployment
+- **Git Commit**: 83a31a0 - "feat: Add distributor_music to column B"
+- **CLASP Version**: 28 - "Add distributor_music to column B (API v1.4.2)"
+- **Production**: Live on Google Sheets ✅
+
+### 🔄 Modifié
+- `clearCalculatedData()`: Changed preservation logic from B,C,D → C,D only
+- Column B workflow: Manual input → API auto-fetch
+- API response structure: Added `distributor_music` taxonomy field
+
+### 📚 Documentation
+- **API-REFERENCE.md**: Complete endpoint documentation with `distributor_music` examples
+- **README.md**: Updated Column Mapping section with distributor_music
+
+### ⚡ Benefits
+- **🎯 Accuracy**: No manual typos in distributor names
+- **⏱️ Time Saving**: Eliminates manual distributor entry
+- **🔄 Synchronization**: Always reflects WordPress taxonomy data
+- **🧹 Clean Workflow**: Clear → Fetch → All data populated
+
+---
+
 ## [1.1.1] - 2025-10-08 🛡️
 
 ### ✨ Ajouté - Safe Cohabitation Mode
