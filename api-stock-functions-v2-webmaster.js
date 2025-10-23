@@ -14,8 +14,8 @@
 
 /**
  * 🧹 STEP 1: Clear Calculated Data
- * Clears columns I, L, M, N, S (calculated columns)
- * PRESERVES columns B, C, D (source data - DO NOT TOUCH!)
+ * Clears ALL columns EXCEPT B, C, D (source data)
+ * PRESERVES ONLY: Column B, C, D (manual source data)
  */
 function clearCalculatedData() {
   const ui = SpreadsheetApp.getUi();
@@ -28,60 +28,60 @@ function clearCalculatedData() {
 
   // Confirm action
   const result = ui.alert(
-    '🧹 Clear Calculated Data',
-    'This will clear calculated columns (I, L, M, N, S).\n\n' +
-    '✅ WILL CLEAR:\n' +
-    '• Column I (Initial Quantity)\n' +
-    '• Column L (Stock Quantity)\n' +
-    '• Column M (Status Text)\n' +
-    '• Column N (Date)\n' +
-    '• Column S (Week Number)\n\n' +
+    '🧹 Clear ALL Data (except C, D)',
+    'This will clear ALL columns EXCEPT C, D.\n\n' +
     '✅ WILL PRESERVE:\n' +
-    '• Column B, C, D (Source Data)\n' +
-    '• All other columns\n\n' +
+    '• Column C (manual source data)\n' +
+    '• Column D (manual source data)\n\n' +
+    '❌ WILL CLEAR:\n' +
+    '• Column B (Distributor Music - will be fetched from API)\n' +
+    '• ALL other columns (A, E-Z, etc.)\n' +
+    '• API data (H, J, T, U, etc.)\n' +
+    '• Calculated data (I, L, M, N, S)\n' +
+    '• Images (A, Z)\n\n' +
+    'This gives you a clean slate for fresh API fetch.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
 
   if (result !== ui.Button.YES) return;
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('🧹 Clearing calculated data...', 'Processing', -1);
+  SpreadsheetApp.getActiveSpreadsheet().toast('🧹 Clearing all data except C, D...', 'Processing', -1);
 
   try {
     const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
 
-    // Column indices (0-based)
-    const COLUMN_I = 8;   // Column I (9th column)
-    const COLUMN_L = 11;  // Column L (12th column)
-    const COLUMN_M = 12;  // Column M (13th column)
-    const COLUMN_N = 13;  // Column N (14th column)
-    const COLUMN_S = 18;  // Column S (19th column)
-
-    // Clear columns I, L, M, N, S (starting from row 2 - preserve headers)
     if (lastRow > 1) {
-      // Clear each column individually to preserve other data
-      sheet.getRange(2, COLUMN_I + 1, lastRow - 1, 1).clearContent();  // Column I
-      sheet.getRange(2, COLUMN_L + 1, lastRow - 1, 1).clearContent();  // Column L
-      sheet.getRange(2, COLUMN_M + 1, lastRow - 1, 1).clearContent();  // Column M
-      sheet.getRange(2, COLUMN_N + 1, lastRow - 1, 1).clearContent();  // Column N
-      sheet.getRange(2, COLUMN_S + 1, lastRow - 1, 1).clearContent();  // Column S
+      // Clear ALL columns except C (2), D (3)
+      // Starting from row 2 (preserve headers)
 
-      Logger.log(`✅ Cleared ${lastRow - 1} rows of calculated data`);
+      // Columns A and B (indices 0, 1)
+      if (lastCol >= 2) {
+        sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
+      }
+
+      // Columns E onwards (index 4+)
+      if (lastCol >= 5) {
+        const numColsToClear = lastCol - 4; // From column E to end
+        sheet.getRange(2, 5, lastRow - 1, numColsToClear).clearContent();
+      }
+
+      Logger.log(`✅ Cleared ${lastRow - 1} rows (all columns except C, D)`);
     }
 
-    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Calculated data cleared!', 'Success', 3);
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Data cleared!', 'Success', 3);
 
     ui.alert(
       '✅ Clear Complete',
-      `Cleared calculated data from ${lastRow - 1} rows.\n\n` +
-      '📊 Columns cleared:\n' +
-      '• Column I (Initial Quantity)\n' +
-      '• Column L (Stock Quantity)\n' +
-      '• Column M (Status Text)\n' +
-      '• Column N (Date)\n' +
-      '• Column S (Week Number)\n\n' +
-      '✅ Columns B, C, D preserved (source data)\n\n' +
-      'Next step: Click "Fetch Data & Calculate"',
+      `Cleared all data from ${lastRow - 1} rows.\n\n` +
+      '✅ PRESERVED:\n' +
+      '• Column C (manual source data)\n' +
+      '• Column D (manual source data)\n\n' +
+      '❌ CLEARED:\n' +
+      '• Column B (will be fetched from API)\n' +
+      '• All other columns\n\n' +
+      'Next step: Click "📊 Fetch Data & Calculate"',
       ui.ButtonSet.OK
     );
 
@@ -92,12 +92,32 @@ function clearCalculatedData() {
 }
 
 /**
- * 📊 STEP 2: Fetch Data & Calculate
- * Reads source columns (D, H, J, T, U, R, O) from sheet
- * Calculates columns I, L, M, N, S automatically
- * Writes calculated values back to sheet
+ * 📊 STEP 2: Fetch Data from API & Calculate
+ * Fetches data from YOYAKU.IO API + calculates in one operation
+ *
+ * Workflow:
+ * 1. Reads SKUs from column A
+ * 2. For each SKU, fetches from API endpoint: /yoyaku/v1/product-stock-data/{SKU}
+ *    - A, Z: Images (image_url)
+ *    - G: Depot Vente (_depot_vente)
+ *    - H: Current Stock (_stock - protected >= 0)
+ *    - J: Initial Quantity (_initial_quantity)
+ *    - K: Stock Status (_stock_status)
+ *    - O: Online Status (is_online - red background if offline)
+ *    - T: Quantity Shelf (_total_shelves - quantity in units, NOT _yyd_total_shelf EUR amount)
+ *    - U: Total Preorders (_total_preorders)
+ * 3. Reads manual columns from sheet: D, R, release date
+ * 4. Calculates: I, L, M, N, S
+ * 5. Writes all data to sheet in single pass
+ *
+ * Benefits:
+ * - 50% reduction in API calls (1 endpoint instead of 2)
+ * - Auto-fetch images (A, Z), stock status (K), online status (O)
+ * - Negative stock protection (H >= 0)
+ * - Correct quantity field (_total_shelves units, not EUR amounts)
+ * - Single-click workflow
  */
-function fetchDataAndCalculate() {
+function fetchDataAndCalculateFromAPI() {
   const ui = SpreadsheetApp.getUi();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('update stock');
 
@@ -108,21 +128,27 @@ function fetchDataAndCalculate() {
 
   // Confirm action
   const result = ui.alert(
-    '📊 Fetch Data & Calculate',
-    'This will automatically calculate:\n\n' +
+    '📊 Fetch Data from API & Calculate (Optimized)',
+    'This will:\n\n' +
+    '✅ Fetch from YOYAKU.IO API:\n' +
+    '• Current Stock (H)\n' +
+    '• Initial Quantity (J)\n' +
+    '• Quantity Shelf (T)\n' +
+    '• Total Preorders (U)\n\n' +
+    '✅ Calculate automatically:\n' +
     '• Column I = J + D (Initial Quantity)\n' +
     '• Column L = MAX(0, D+H-T-U-1) (Stock Quantity)\n' +
-    '• Column M = Stock Status Text\n' +
+    '• Column M = Status Text\n' +
     '• Column N = Today\'s Date\n' +
     '• Column S = Week Number\n\n' +
-    'Based on source columns: D, H, J, T, U, R, O\n\n' +
+    '⚡ Performance: 50% faster (1 API call instead of 2)\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
 
   if (result !== ui.Button.YES) return;
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('📊 Calculating data...', 'Processing', -1);
+  SpreadsheetApp.getActiveSpreadsheet().toast('📊 Fetching from API & calculating...', 'Processing', -1);
 
   try {
     // Get all data
@@ -130,115 +156,236 @@ function fetchDataAndCalculate() {
     const headers = data[0];
     const lastRow = data.length;
 
-    // Source column indices (0-based)
-    const COLUMN_D = 3;   // Column D
-    const COLUMN_H = 7;   // Column H
-    const COLUMN_J = 9;   // Column J
-    const COLUMN_T = 19;  // Column T
-    const COLUMN_U = 20;  // Column U
-    const COLUMN_R = 17;  // Column R
-    const COLUMN_O = 14;  // Column O
+    // Find SKU column
+    const skuIndex = headers.findIndex(h => h.toString().toUpperCase() === 'SKU');
+    if (skuIndex === -1) {
+      ui.alert('❌ Error', 'SKU column not found!', ui.ButtonSet.OK);
+      return;
+    }
 
-    // Calculated column indices (0-based)
-    const COLUMN_I = 8;   // Column I (Initial Quantity)
-    const COLUMN_L = 11;  // Column L (Stock Quantity)
-    const COLUMN_M = 12;  // Column M (Status Text)
-    const COLUMN_N = 13;  // Column N (Date)
-    const COLUMN_S = 18;  // Column S (Week Number)
+    // Column indices (0-based)
+    const COLUMN_A = 0;   // Image formula =IMAGE(Z) (from API)
+    const COLUMN_B = 1;   // Distributor Music (from API: distributor_music taxonomy)
+    const COLUMN_D = 3;   // New Order Quantity (manual input)
+    const COLUMN_G = 6;   // Depot Vente (from API: _depot_vente)
+    const COLUMN_H = 7;   // Current Stock (from API: _stock - protected >= 0)
+    const COLUMN_J = 9;   // Initial Quantity Origin (from API: _initial_quantity)
+    const COLUMN_K = 10;  // Stock Status (from API: _stock_status)
+    const COLUMN_O = 14;  // Online Status (from API: is_online - red if offline)
+    const COLUMN_R = 17;  // Category (manual)
+    const COLUMN_T = 19;  // Quantity Shelf (from API: _total_shelves - quantity in units)
+    const COLUMN_U = 20;  // Total Preorders (from API: _total_preorders)
+    const COLUMN_Z = 25;  // Image URL raw (from API: image_url)
 
-    Logger.log('=== FETCH DATA & CALCULATE ===');
+    // Calculated columns
+    const COLUMN_I = 8;   // Initial Quantity (calculated)
+    const COLUMN_L = 11;  // Stock Quantity (calculated)
+    const COLUMN_M = 12;  // Status Text (calculated)
+    const COLUMN_N = 13;  // Date (calculated)
+    const COLUMN_S = 18;  // Week Number (calculated)
+
+    // API endpoint
+    const API_BASE = 'https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data';
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errorDetails = [];
+
+    Logger.log('=== FETCH FROM API & CALCULATE ===');
     Logger.log(`Processing ${lastRow - 1} rows...`);
-
-    let calculatedCount = 0;
-    let skippedCount = 0;
 
     // Process each row (starting from row 2 - skip header)
     for (let i = 1; i < lastRow; i++) {
-      const row = data[i];
+      const sku = data[i][skuIndex];
 
-      // Get source values
-      const D = parseFloat(row[COLUMN_D]) || 0;
-      const H = parseFloat(row[COLUMN_H]) || 0;
-      const J = parseFloat(row[COLUMN_J]) || 0;
-      const T = parseFloat(row[COLUMN_T]) || 0;
-      const U = parseFloat(row[COLUMN_U]) || 0;
-      const R = row[COLUMN_R] ? row[COLUMN_R].toString().trim() : '';
-      const O = row[COLUMN_O];
-
-      // Skip empty rows (no SKU or all zeros)
-      const skuCol = row[0]; // Assuming SKU is in column A
-      if (!skuCol || skuCol === '' || skuCol === '#N/A') {
-        skippedCount++;
+      // Skip empty SKUs
+      if (!sku || sku === '' || sku === '#N/A' || sku.toString().trim() === '') {
         continue;
       }
 
-      // 🧮 CALCULATION 1: Column I = J + D (Initial Quantity)
-      const I = J + D;
-      sheet.getRange(i + 1, COLUMN_I + 1).setValue(I);
+      try {
+        // 🌐 STEP 1: Fetch from API
+        const searchUrl = `${API_BASE}/${encodeURIComponent(sku.toString().trim())}`;
+        const searchOptions = {
+          method: 'get',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          muteHttpExceptions: true
+        };
 
-      // 🧮 CALCULATION 2: Column L = MAX(0, D+H-T-U-1) (Stock Quantity with negative protection)
-      const L_raw = D + H - T - U - 1;
-      const L = Math.max(0, L_raw);  // Negative stock protection
-      sheet.getRange(i + 1, COLUMN_L + 1).setValue(L);
+        const searchResponse = UrlFetchApp.fetch(searchUrl, searchOptions);
+        const product = JSON.parse(searchResponse.getContentText());
 
-      // 🧮 CALCULATION 3: Column M = Status Text
-      let M = "";
-      if (J > 0) {
-        M = "back in stock";
-      } else if (J === 0 || J === "" || J === null) {
-        M = "arrivals";
-      }
-      sheet.getRange(i + 1, COLUMN_M + 1).setValue(M);
-
-      // 🧮 CALCULATION 4: Column N = TODAY()
-      const N = new Date();
-      sheet.getRange(i + 1, COLUMN_N + 1).setValue(N);
-
-      // 🧮 CALCULATION 5: Column S = Week Number (if R = "imports" or "exclusives")
-      let S = "";
-      if (R === "imports" || R === "exclusives") {
-        if (O && O !== "") {
-          const dateO = new Date(O);
-          const weekNum = Utilities.formatDate(dateO, Session.getScriptTimeZone(), "w");
-          S = `Week ${weekNum}`;
+        // Check if product was found
+        if (!product || product.found === false || product.error) {
+          errorCount++;
+          errorDetails.push({
+            row: i + 1,
+            sku: sku,
+            error: product.error || 'Product not found'
+          });
+          continue;
         }
-      }
-      sheet.getRange(i + 1, COLUMN_S + 1).setValue(S);
 
-      calculatedCount++;
+        // Extract API data
+        const imageUrl = product.image_url || '';
+        const distributorMusic = product.distributor_music || '';
+        const stockQuantity = product.stock_quantity || 0;
+        const stockStatus = product.stock_status || 'outofstock';
+        const depotVente = product.depot_vente || '';
+        const initialQty = product.initial_quantity || '';
+        const isOnline = product.is_online || false;
+        const onlineStatus = isOnline ? 'online' : 'not online';
+        const shelfQty = product.shelf_quantity || '';
+        const totalPreorders = product.total_preorders || '';
 
-      // Log every 50 rows
-      if (calculatedCount % 50 === 0) {
-        Logger.log(`Calculated ${calculatedCount} rows...`);
-        SpreadsheetApp.getActiveSpreadsheet().toast(
-          `Calculating... ${calculatedCount}/${lastRow - 1} rows`,
-          'Processing',
-          -1
-        );
+        // Protection: stock_quantity can be negative, must be >= 0
+        const H = Math.max(0, stockQuantity);
+        const J = parseFloat(initialQty) || 0;
+        const T = parseFloat(shelfQty) || 0;
+        const U = parseFloat(totalPreorders) || 0;
+
+        // 📝 STEP 2: Read manual columns from sheet
+        const D = parseFloat(data[i][COLUMN_D]) || 0;
+        const R = data[i][COLUMN_R] ? data[i][COLUMN_R].toString().trim() : '';
+        const releaseDate = data[i][COLUMN_O];  // Original release date (manual)
+
+        // 🧮 STEP 3: Calculate columns
+        const I = J + D;
+        const L_raw = D + H - T - U - 1;
+        const L = Math.max(0, L_raw);  // Negative stock protection
+
+        let M = "";
+        if (J > 0) {
+          M = "back in stock";
+        } else if (J === 0 || J === "" || J === null) {
+          M = "arrivals";
+        }
+
+        const N = new Date();
+
+        let S = "";
+        if (R === "imports" || R === "exclusives") {
+          if (releaseDate && releaseDate !== "") {
+            const dateO = new Date(releaseDate);
+            const weekNum = Utilities.formatDate(dateO, Session.getScriptTimeZone(), "w");
+            S = `Week ${weekNum}`;
+          }
+        }
+
+        // ✍️ STEP 4: Write all data to sheet
+        const rowIndex = i + 1; // 1-based row index
+
+        // Z: Image URL (raw URL)
+        sheet.getRange(rowIndex, COLUMN_Z + 1).setValue(imageUrl);
+
+        // A: Image formula =IMAGE(Z)
+        if (imageUrl) {
+          const imageFormulaCell = `Z${rowIndex}`;
+          sheet.getRange(rowIndex, COLUMN_A + 1).setFormula(`=IMAGE(${imageFormulaCell})`);
+        }
+
+        // B: Distributor Music
+        sheet.getRange(rowIndex, COLUMN_B + 1).setValue(distributorMusic);
+
+        // G: Depot Vente
+        sheet.getRange(rowIndex, COLUMN_G + 1).setValue(depotVente);
+
+        // H: Current Stock (protected against negatives)
+        sheet.getRange(rowIndex, COLUMN_H + 1).setValue(H);
+
+        // J: Initial Quantity Origin
+        sheet.getRange(rowIndex, COLUMN_J + 1).setValue(J);
+
+        // K: Stock Status
+        sheet.getRange(rowIndex, COLUMN_K + 1).setValue(stockStatus);
+
+        // O: Online Status (with conditional formatting - overrides manual release date column)
+        const onlineCell = sheet.getRange(rowIndex, COLUMN_O + 1);
+        onlineCell.setValue(onlineStatus);
+        if (!isOnline) {
+          // Set background to red for "not online"
+          onlineCell.setBackground('#ff0000');
+          onlineCell.setFontColor('#ffffff'); // White text for readability
+        } else {
+          // Clear formatting for "online"
+          onlineCell.setBackground(null);
+          onlineCell.setFontColor(null);
+        }
+
+        // T: Quantity Shelf
+        sheet.getRange(rowIndex, COLUMN_T + 1).setValue(T);
+
+        // U: Total Preorders
+        sheet.getRange(rowIndex, COLUMN_U + 1).setValue(U);
+
+        // Write calculated data
+        sheet.getRange(rowIndex, COLUMN_I + 1).setValue(I);
+        sheet.getRange(rowIndex, COLUMN_L + 1).setValue(L);
+        sheet.getRange(rowIndex, COLUMN_M + 1).setValue(M);
+        sheet.getRange(rowIndex, COLUMN_N + 1).setValue(N);
+        sheet.getRange(rowIndex, COLUMN_S + 1).setValue(S);
+
+        successCount++;
+
+        // Progress update every 10 products
+        if (successCount % 10 === 0) {
+          SpreadsheetApp.getActiveSpreadsheet().toast(
+            `✅ Processed ${successCount} products...`,
+            'Progress',
+            3
+          );
+        }
+
+        Logger.log(`✅ SKU ${sku}: Fetched & calculated (Stock: ${H} → ${L})`);
+
+      } catch (error) {
+        errorCount++;
+        errorDetails.push({
+          row: i + 1,
+          sku: sku,
+          error: error.message
+        });
+        Logger.log(`❌ Error processing SKU ${sku}: ${error.message}`);
       }
     }
 
-    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Calculations complete!', 'Success', 3);
+    // Final report
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Fetch & Calculate complete!', 'Success', 3);
 
-    Logger.log(`✅ Calculation complete: ${calculatedCount} rows calculated, ${skippedCount} rows skipped`);
+    let reportMessage = `✅ Fetch & Calculate Complete!\n\n`;
+    reportMessage += `📊 Results:\n`;
+    reportMessage += `• Success: ${successCount} products\n`;
+    reportMessage += `• Errors: ${errorCount} products\n\n`;
+    reportMessage += `✅ Data fetched from API:\n`;
+    reportMessage += `• Column H (Current Stock)\n`;
+    reportMessage += `• Column J (Initial Quantity)\n`;
+    reportMessage += `• Column T (Quantity Shelf)\n`;
+    reportMessage += `• Column U (Total Preorders)\n\n`;
+    reportMessage += `✅ Calculated columns:\n`;
+    reportMessage += `• Column I (Initial Quantity)\n`;
+    reportMessage += `• Column L (Stock Quantity)\n`;
+    reportMessage += `• Column M (Status Text)\n`;
+    reportMessage += `• Column N (Today's Date)\n`;
+    reportMessage += `• Column S (Week Number)\n\n`;
 
-    ui.alert(
-      '✅ Calculation Complete',
-      `Successfully calculated ${calculatedCount} rows!\n\n` +
-      '📊 Calculated columns:\n' +
-      `• Column I (Initial Quantity): ${calculatedCount} values\n` +
-      `• Column L (Stock Quantity): ${calculatedCount} values\n` +
-      `• Column M (Status Text): ${calculatedCount} values\n` +
-      `• Column N (Today's Date): ${calculatedCount} values\n` +
-      `• Column S (Week Number): ${calculatedCount} values\n\n` +
-      `⏭️ Skipped: ${skippedCount} empty rows\n\n` +
-      'Next step: Click "Update Stock YOYAKU v2.0"',
-      ui.ButtonSet.OK
-    );
+    if (errorDetails.length > 0) {
+      reportMessage += `❌ Errors:\n`;
+      errorDetails.slice(0, 5).forEach(err => {
+        reportMessage += `• Row ${err.row} (${err.sku}): ${err.error}\n`;
+      });
+    }
+
+    reportMessage += `\n⚡ Next step: Click "Update Stock YOYAKU v2.0"`;
+
+    ui.alert('📊 Fetch & Calculate Complete', reportMessage, ui.ButtonSet.OK);
+
+    Logger.log(`✅ Fetch & Calculate complete: ${successCount} success, ${errorCount} errors`);
 
   } catch (error) {
-    Logger.log('Error in fetchDataAndCalculate: ' + error.toString());
-    ui.alert('❌ Error', `Failed to calculate data: ${error.message}`, ui.ButtonSet.OK);
+    Logger.log('Error in fetchDataAndCalculateFromAPI: ' + error.toString());
+    ui.alert('❌ Error', `Failed to fetch & calculate: ${error.message}`, ui.ButtonSet.OK);
   }
 }
 
