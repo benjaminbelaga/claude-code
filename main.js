@@ -24,39 +24,32 @@ function onOpen() {
 
   menu.addSeparator();
 
-  // --- Main Site Menus ---
-  const yoyakuMenu = ui.createMenu('🛒 YOYAKU.io Tools');
-  yoyakuMenu.addItem('Import NEW products', 'runYoyakuNewImport');
-  yoyakuMenu.addItem('Import PRE-ORDER products', 'runYoyakuPreOrderImport');
-  menu.addSubMenu(yoyakuMenu);
-
-  const yydMenu = ui.createMenu('📦 YYDistribution Tools');
-  yydMenu.addItem('Import products', 'runYYDImport');
-  menu.addSubMenu(yydMenu);
-
-  const barcelonaMenu = ui.createMenu('🏬 BARCELONA Tools');
-  barcelonaMenu.addItem('Import products', 'runBarcelonaImport');
-  menu.addSubMenu(barcelonaMenu);
-
-  // NEW API Direct Menu (Fast & Reliable) - RENAMED
+  // --- Stock Update Menu (WEBMASTER v2.0) ---
   const apiDirectMenu = ui.createMenu('⚡ Update Stock');
 
   // 🆕 WEBMASTER EDITION v2.0 - 3-CLICK WORKFLOW (ZERO FORMULAS)
   apiDirectMenu.addItem('🧹 Clear Calculated Data', 'clearCalculatedData');
-  apiDirectMenu.addItem('📊 Fetch Data & Calculate', 'fetchDataAndCalculate');
+  apiDirectMenu.addItem('📊 Fetch Data & Calculate', 'fetchDataAndCalculateFromAPI');
   apiDirectMenu.addItem('📦 Update Stock YOYAKU v2.0', 'updateYoyakuStockDirectAPI_V2_Webmaster');
   apiDirectMenu.addSeparator();
-  apiDirectMenu.addItem('📊 Show Calculation Report', 'showCalculationReport');
-  apiDirectMenu.addItem('🧪 Test Calculations', 'testCalculations');
-  apiDirectMenu.addSeparator();
 
-  // Phase 1 Functions (Existing) - KEPT AS ORIGINAL
-  apiDirectMenu.addItem('🚀 Update Picking (Direct API)', 'updatePickingDirectAPI');
-  apiDirectMenu.addSeparator();
-  apiDirectMenu.addItem('📅 Update Release Date YYD (Direct API)', 'updateReleaseDateDirectAPI');
-  apiDirectMenu.addSeparator();
+  // Other Updates Submenu
+  const otherUpdatesMenu = ui.createMenu('🔄 Other Updates');
+  otherUpdatesMenu.addItem('🚀 Update Picking (Direct API)', 'updatePickingDirectAPI');
+  otherUpdatesMenu.addItem('📅 Update Release Date YYD (Direct API)', 'updateReleaseDateDirectAPI');
+  apiDirectMenu.addSubMenu(otherUpdatesMenu);
 
-  // Phase 2 NEW: Import 852 - Create New Products
+  menu.addSubMenu(apiDirectMenu);
+
+  menu.addSeparator();
+
+  // --- Main Site Menus ---
+  const yoyakuMenu = ui.createMenu('🛒 YOYAKU.io Tools');
+  yoyakuMenu.addItem('Import NEW products', 'runYoyakuNewImport');
+  yoyakuMenu.addItem('Import PRE-ORDER products', 'runYoyakuPreOrderImport');
+  yoyakuMenu.addSeparator();
+
+  // Import 852 - Create New Products (moved from Update Stock menu)
   const import852Menu = ui.createMenu('🚀 Create New Products (Import 852)');
   import852Menu.addItem('📦 Create New Products (API Direct)', 'processImport852NewProductsAPI');
   import852Menu.addSeparator();
@@ -68,9 +61,17 @@ function onOpen() {
   import852Menu.addItem('🔄 Reset Configuration', 'resetImport852Configuration');
   import852Menu.addSeparator();
   import852Menu.addItem('📋 Legacy WP Import Instructions', 'showLegacyImport852Instructions');
-  apiDirectMenu.addSubMenu(import852Menu);
+  yoyakuMenu.addSubMenu(import852Menu);
 
-  menu.addSubMenu(apiDirectMenu);
+  menu.addSubMenu(yoyakuMenu);
+
+  const yydMenu = ui.createMenu('📦 YYDistribution Tools');
+  yydMenu.addItem('Import products', 'runYYDImport');
+  menu.addSubMenu(yydMenu);
+
+  const barcelonaMenu = ui.createMenu('🏬 BARCELONA Tools');
+  barcelonaMenu.addItem('Import products', 'runBarcelonaImport');
+  menu.addSubMenu(barcelonaMenu);
 
   menu.addSeparator();
 

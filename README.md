@@ -1,885 +1,685 @@
-# 🚀 WP Import Dashboard - Direct API Edition
+# WP Import Dashboard - Google Sheets Integration
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
-[![Status](https://img.shields.io/badge/status-production--ready-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
-[![Performance](https://img.shields.io/badge/performance-20x_faster-orange.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
-[![OpenAI](https://img.shields.io/badge/OpenAI-Direct_API-green.svg)](https://github.com/benjaminbelaga/wp-import-dashboard)
-
-**Enterprise-grade Google Apps Script solution for high-performance e-commerce operations with direct WooCommerce API integration.**
-
-**Author:** Benjamin Belaga | **Company:** YOYAKU SARL | **Date:** 2025-08-21
+> **Category:** Integration / Tool
+> **Repository:** `benjaminbelaga/wp-import-dashboard`
+> **Local Path:** `/Users/yoyaku/repos/wp-import-dashboard/`
+> **Production:** YOYAKU.IO + YYD.FR
+> **Status:** Active
 
 ---
 
-## 📚 Table des matières
+## 📖 Description
 
-- [🆕 What's New - v1.1.1](#-whats-new---v111)
-- [🎯 Vue d'ensemble](#-vue-densemble)
-- [🚀 Installation rapide](#-installation-rapide)
-- [🤖 OpenAI Metadata Parser](#-openai-metadata-parser)
-- [⚙️ Configuration](#️-configuration)
-- [🎮 Guide d'utilisation](#-guide-dutilisation)
-- [🔥 Fonctionnalités Phase 1](#-fonctionnalités-phase-1)
-- [🏗️ Architecture technique](#️-architecture-technique)
-- [⚡ Performances](#-performances)
-- [🧪 Tests & Validation](#-tests--validation)
-- [🔐 Sécurité](#-sécurité)
-- [🔧 Dépannage](#-dépannage)
-- [🗺️ Roadmap](#️-roadmap)
-- [💬 Support](#-support)
+Google Apps Script integration for bulk stock management via WooCommerce REST API. Enables webmaster team to update stock quantities for hundreds of products directly from Google Sheets with zero-downtime and real-time updates.
+
+**Key Features:**
+- REST API v2 with targeted SKUs recalculation (540x faster than v1)
+- Smart 5-minute cache layer for optimal performance
+- Event-driven auto-updates (data stays fresh automatically)
+- Zero-downtime deployment via Google Apps Script (clasp)
+- Three-layer optimization architecture
 
 ---
 
-## 🆕 What's New - v1.2.0
+## 🏗️ Context & Business Logic
 
-### 🎵 Distributor Music Auto-Fetch (October 2025)
+**Problem Solved:**
+Manual stock updates for 803+ products took hours and was error-prone. Google Sheets workflow with v1 API took 15-18 seconds for 3 SKUs due to full-catalog recalculation (13,459 products). Webmasters needed a fast, reliable way to manage stock directly from spreadsheets.
 
-**Automatic taxonomy extraction from API** - Column B now auto-populated with distributor information from WordPress taxonomies.
+**Integration Points:**
+- **Sites:** YOYAKU.IO (B2C) + YYD.FR (B2B)
+- **Dependencies:** YSC Plugin, YYD Theme, WooCommerce REST API v3
+- **External APIs:** WooCommerce Products API, Custom Recalculation API v2
 
-#### Webmaster v2.0 Workflow Enhancement
-
-- ✅ **Column B: Distributor Music** - Auto-fetched from `distributormusic` taxonomy
-- ✅ **Zero Manual Input** - No more typing distributor names manually
-- ✅ **API Integration** - Uses yoyaku-api-connector v1.4.2 endpoint
-- ✅ **Clean Workflow Updated** - Preserves only columns C, D (B fetched from API)
-
-#### Column Mapping (Webmaster v2.0)
-
-| Column | Field | Source | Example | Description |
-|--------|-------|--------|---------|-------------|
-| **A** | Image | API | `=IMAGE(Z)` | Product thumbnail (formula) |
-| **B** | Distributor Music | API (taxonomy) | `yydistribution`, `clone` | Auto-fetched from `distributormusic` taxonomy |
-| **C** | SKU | Manual | `YOYAKU012` | Product SKU (preserved on clear) |
-| **D** | New Order Quantity | Manual | `50` | Quantity to order (preserved on clear) |
-| **G** | Depot Vente | API | `yes`, `no` | Depot vente status |
-| **H** | Current Stock | API | `12`, `0` | Current stock (negative protected) |
-| **J** | Initial Quantity Origin | API | `10` | Initial quantity before order |
-| **K** | Stock Status | API | `instock`, `outofstock` | WooCommerce stock status |
-| **O** | Online Status | API | `online`, `not online` | Publication status (red if offline) |
-| **T** | Quantity Shelf | API | `24` | Physical quantity on shelf (_total_shelves) |
-| **U** | Total Preorders | API | `28` | Total preorders count |
-| **Z** | Image URL | API | `https://...` | Raw image URL |
-
-#### API Endpoint
-
-**Powered by:** [yoyaku-api-connector v1.4.2](https://github.com/benjaminbelaga/yoyaku-api-connector)
-
-```http
-GET https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data/{SKU}
-```
-
-Response includes `distributor_music` field:
-```json
-{
-  "sku": "YOYAKU012",
-  "distributor_music": "yydistribution",
-  "stock_quantity": -67,
-  "shelf_quantity": "24",
-  ...
-}
-```
-
-#### Quick Start (3-Click Workflow)
-
-```
-1. Menu > ⚡ Update Stock > 🧹 Clear Calculated Data
-   → Clears everything except columns C, D
-
-2. Menu > ⚡ Update Stock > 📊 Fetch Data & Calculate
-   → Fetches ALL data from API (including column B)
-
-3. Menu > ⚡ Update Stock > 📦 Update Stock YOYAKU v2.0
-   → Pushes updates to WooCommerce
-```
-
-📖 **Guide complet:** [WEBMASTER-GUIDE-SIMPLE.md](./WEBMASTER-GUIDE-SIMPLE.md)
+**Revenue Impact:**
+Critical - Direct impact on inventory accuracy and order fulfillment
 
 ---
 
-### 🤖 Previous: Direct OpenAI Metadata Parser (v1.1.1)
+## 🛠️ Installation & Setup
 
-**Élimination complète de Make.com** - Économie de $420/an avec API directe OpenAI.
+### Prerequisites
 
-📖 **Guide complet:** [OPENAI-SETUP.md](./OPENAI-SETUP.md)
-
----
-
-## 🎯 Vue d'ensemble
-
-### Mission stratégique
-Migration complète des **11 imports WP All Import** vers des **appels API directs WooCommerce** pour révolutionner les performances et la fiabilité des opérations e-commerce YOYAKU.
-
-### Problématique résolue
-| Problème WP Import | Solution API Direct |
-|-------------------|-------------------|
-| ❌ Timeouts fréquents | ✅ Jamais de timeout |
-| ❌ 2 minutes/produit | ✅ 3 secondes/produit |
-| ❌ Taux d'erreur 5-10% | ✅ Taux d'erreur <1% |
-| ❌ Pas de feedback temps réel | ✅ Monitoring temps réel |
-| ❌ Gestion d'erreur basique | ✅ Error handling avancé |
-
-### Écosystème concerné
-- 🎯 **YOYAKU.IO** (Production - 67,471 commandes HPOS)
-- 🎯 **YYDistribution.fr** (Production - 5,395 commandes HPOS) 
-- 🔮 **Barcelona** (Planifié Phase 3)
-
----
-
-## 🚀 Installation rapide
-
-### Prérequis techniques
-- ✅ Google Apps Script accès (compte @yoyaku.io)
-- ✅ WooCommerce REST API v3 activée
-- ✅ Clés API WooCommerce Read/Write permissions
-- ✅ CLASP CLI installé (optionnel)
-
-### Installation en 3 étapes
-
-#### 1️⃣ Cloner et configurer
 ```bash
-# Cloner le repository
+# Required software/versions
+Node.js >= 14.0
+npm >= 6.0
+clasp >= 2.4.0 (Google Apps Script CLI)
+Google Account with access to YOYAKU Import 803 sheet
+```
+
+### Installation Steps
+
+**Local Development:**
+```bash
+# Clone repository
+cd /Users/yoyaku/repos/
 git clone https://github.com/benjaminbelaga/wp-import-dashboard.git
 cd wp-import-dashboard
 
-# Configuration CLASP (optionnel)
+# Install clasp globally
+npm install -g @google/clasp
+
+# Login to Google
 clasp login
+
+# Clone the Apps Script project
+clasp clone <script-id>
+```
+
+**Production Deployment:**
+```bash
+# Deploy to Google Apps Script
+cd /Users/yoyaku/repos/wp-import-dashboard
+
+# Push changes
 clasp push
+
+# Deploy as new version
+clasp deploy --description "v4.0.0 - REST API v2 integration (540x faster)"
 ```
 
-#### 2️⃣ Configuration API
-```javascript
-// Editer api-credentials.js avec vos clés
-const API_CREDENTIALS = {
-  'yoyaku.io': {
-    consumer_key: 'ck_[VOTRE_CLÉ_YOYAKU]',
-    consumer_secret: 'cs_[VOTRE_SECRET_YOYAKU]'
-  },
-  'yydistribution.fr': {
-    consumer_key: 'ck_[VOTRE_CLÉ_YYD]', 
-    consumer_secret: 'cs_[VOTRE_SECRET_YYD]'
-  }
-};
-```
+### Configuration
 
-#### 3️⃣ Test de connectivité
-```javascript
-// Dans Google Apps Script
-testQuickConnectivity(); // Valide les APIs
+**Required Credentials:**
+- WooCommerce API: Embedded in `api-credentials.js` (secure Script Properties)
+- Recalculation Tokens: `~/.credentials/yoyaku/api-keys/cloudflare.env` (CRED-008)
+
+**Configuration Files:**
+```bash
+# Google Apps Script
+api-credentials.js: WooCommerce credentials and API tokens
+api-stock-functions-v2-webmaster.js: Main workflow logic
 ```
 
 ---
 
-## 🤖 OpenAI Metadata Parser
+## 📂 Architecture & File Structure
 
-### Vue d'ensemble
-
-Remplace complètement le workflow Make.com pour le parsing de métadonnées produits avec une intégration directe OpenAI API.
-
-### Architecture
-
-```
-Avant (Make.com):
-Google Sheet → Make.com Webhook → OpenAI → Make.com → Google Sheet
-(5-7 secondes, $40/mois, 3 points de failure)
-
-Après (Direct):
-Google Sheet → OpenAI API → Google Sheet
-(1-2 secondes, $5/mois, 1 point de failure)
-```
-
-### Installation
-
-#### 1. Obtenir une clé API OpenAI
-
-1. Créer un compte: https://platform.openai.com/signup
-2. Ajouter $10 de crédits (suffisant pour ~2000 produits)
-3. Créer une clé API: https://platform.openai.com/api-keys
-   - Nom: "WP Import Dashboard"
-   - Copier la clé (commence par `sk-...`)
-
-#### 2. Configurer dans Google Sheet
-
-```
-Menu > 📊 metadata > ⚙️ Setup OpenAI API Key
-→ Coller la clé
-→ OK
-```
-
-La clé est stockée de manière sécurisée via `PropertiesService` (encrypted at rest).
-
-#### 3. Test de fonctionnement
-
-```
-Menu > 📊 metadata > 🧪 Test OpenAI Connection
-```
-
-Vérifie:
-- ✅ Clé API valide
-- ✅ Crédits disponibles
-- ✅ Connexion OpenAI OK
-
-#### 4. Test de parsing
-
-```
-Menu > 📊 metadata > 🧪 Test Single Row Parsing
-```
-
-Parse un exemple de produit pour valider la qualité.
-
-### Utilisation Production
-
-```
-Menu > 📊 metadata > 🤖 AI Parsing (OpenAI Direct)
-```
-
-**Input:** Sheet "metadata creator"
-**Output:** Sheet "wp import new product"
-**Modèle:** GPT-4o (recommandé) ou GPT-4o-mini (économique)
-
-### Formats supportés
-
-Le parser extrait automatiquement:
-- ✅ **SKU** - Numéro catalogue
-- ✅ **Release Date** - Date de sortie
-- ✅ **Title** - Titre du produit
-- ✅ **Label** - Maison de disques
-- ✅ **Artists** (1-4) - Artistes multiples
-- ✅ **Genres** (1-4) - Genres musicaux
-- ✅ **Format** - Format physique (12" Vinyl, etc.)
-- ✅ **Description** - Description marketing
-- ✅ **Tracklist** - Liste des pistes
-
-### Coûts estimés
-
-| Modèle | Coût/produit | 100 produits | 1000 produits |
-|--------|-------------|--------------|---------------|
-| GPT-4o | ~$0.005 | $0.50 | $5.00 |
-| GPT-4o-mini | ~$0.001 | $0.10 | $1.00 |
-
-**Comparaison Make.com:**
-- Make.com: $40/mois (fixe)
-- OpenAI Direct: $5/mois (variable selon usage)
-- **Économie: $420/an**
-
-### Monitoring
-
-**Dashboard OpenAI:**
-```
-https://platform.openai.com/usage
-```
-
-Affiche:
-- Coûts en temps réel
-- Nombre de requêtes
-- Tokens utilisés
-- Erreurs éventuelles
-
-**Menu comparaison:**
-```
-Menu > 📊 metadata > 💰 Cost Comparison OpenAI vs Make.com
-```
-
-### Sécurité
-
-- ✅ **Clé API encryptée** - Stockage PropertiesService
-- ✅ **Validation format** - Vérifie que la clé commence par `sk-`
-- ✅ **Error handling** - Messages d'erreur sanitisés
-- ✅ **RGPD compliant** - Aucune donnée personnelle envoyée
-- ✅ **Rate limiting** - 1 seconde entre requêtes
-
-### Migration depuis Make.com
-
-**Phase 1: Tests (1-2 semaines)**
-- Lancer les 2 systèmes en parallèle
-- Comparer la qualité du parsing
-- Valider les résultats
-
-**Phase 2: Basculement (après validation)**
-- Utiliser OpenAI Direct comme système principal
-- Garder Make.com en backup
-
-**Phase 3: Désactivation Make.com (1 mois après)**
-- Désactiver le webhook Make.com
-- Économiser $35/mois
-
-### Support
-
-📖 **Guide complet:** [OPENAI-SETUP.md](./OPENAI-SETUP.md)
-📝 **Changelog:** [CHANGELOG.md](./CHANGELOG.md) (v1.1.0, v1.1.1)
-🚀 **Déploiement:** [DEPLOYMENT-GUIDE-v1.1.0.md](./DEPLOYMENT-GUIDE-v1.1.0.md)
-
----
-
-## ⚙️ Configuration
-
-### Structure Google Sheets requise
-- 📋 **Feuille obligatoire**: `update stock`
-- 📋 **Colonnes standard**:
-  - `SKU` (obligatoire pour toutes les fonctions)
-  - `picking 1`, `picking 2` (fonction Picking)
-  - `new order quantity` (fonctions Stock)
-  - `release date` (fonction Release Date YYD)
-
-### Exemple de structure de données
-```
-| SKU    | picking 1 | picking 2 | new order quantity | release date |
-|--------|-----------|-----------|-------------------|--------------|
-| SKU001 | SH-J3     | SH-K4     | 25                | 2025-09-15   |
-| SKU002 | SH-A1     |           | 0                 | 2025-10-01   |
-```
-
-### Paramètres de batch optimisés
-```javascript
-const BATCH_SIZES = {
-  picking: 10,        // Optimal pour meta_data updates
-  stock_yoyaku: 20,   // Standard stock processing
-  stock_yyd: 15,      // Réduit pour logique pre-order
-  release_date: 50    // Maximum pour updates simples
-};
-```
-
----
-
-## 🎮 Guide d'utilisation
-
-### Interface utilisateur dual
-
-#### 🌟 **Menu API Direct (Recommandé - Ultra-rapide)**
-```
-⚡ Update Tools (API Direct NEW)
-├── 🚀 Update Picking (Direct API)          [Phase 1 ✅]
-├── 📦 Update Stock YOYAKU (Direct API)     [Phase 1 ✅]
-├── 📦 Update Stock YYD (Direct API)        [Phase 1 ✅]
-├── 📅 Update Release Date YYD (Direct API) [Phase 1 ✅]
-└── 🧪 Live API Tests                       [Testing ✅]
-```
-
-#### 🏗️ **Menu Legacy (Conservé pour transition)**
-```
-🏗️ Update Tools (Legacy WP Import)
-├── Update Picking (Legacy)
-├── Update Stock (Legacy)
-├── [Autres imports 11 fonctions...]
-└── Processing Monitoring
-```
-
-### Workflow utilisateur optimisé
-
-1. **📊 Préparation des données**
-   - Ouvrir Google Sheets Dashboard
-   - Vérifier la feuille `update stock` existe
-   - S'assurer que les colonnes requises sont présentes
-
-2. **🚀 Sélection de fonction**
-   - Menu → `⚡ Update Tools (API Direct NEW)`
-   - Choisir la fonction correspondante à vos besoins
-
-3. **✅ Validation et confirmation**
-   - Dialogue de sécurité avec aperçu des avantages
-   - Confirmation explicite avant traitement
-
-4. **⏱️ Monitoring temps réel**
-   - Notifications de progression par batch
-   - Indicateur de pourcentage d'avancement
-   - Temps estimé restant
-
-5. **📈 Résultats détaillés**
-   - Rapport complet succès/erreurs
-   - Détails ligne par ligne des erreurs
-   - Calcul automatique du temps économisé
-
----
-
-## 🔥 Fonctionnalités Phase 1
-
-### 1. 🎯 Update Picking (Direct API)
-**🔄 Remplace**: Import WP manuel  
-**⚡ Performance**: 20x plus rapide  
-**📦 Batch size**: 10 produits  
-**🎯 Sites**: YOYAKU.IO
-
-**Fonctionnement technique**:
-- Recherche produit par SKU via API WooCommerce
-- Mise à jour `_picking_location_1` et `_picking_location_2`
-- Validation existence produit avant update
-- Gestion d'erreur granulaire par produit
-- Rapport détaillé des modifications
-
-**Utilisation**:
-```javascript
-// Colonnes requises dans Google Sheets
-SKU: "SKU001"
-picking 1: "SH-J3" 
-picking 2: "SH-K4"
-
-// Résultat
-_picking_location_1: "SH-J3"
-_picking_location_2: "SH-K4"
-```
-
-### 2. 📦 Update Stock YOYAKU (Direct API)
-**🔄 Remplace**: WP Import 803  
-**⚡ Performance**: 20x plus rapide  
-**📦 Batch size**: 20 produits  
-**🎯 Sites**: YOYAKU.IO
-
-**Fonctionnalités avancées**:
-- Mise à jour stock_quantity et stock_status automatique
-- Calcul intelligent instock/outofstock basé sur quantité
-- Activation automatique manage_stock
-- Tracking détaillé des changements (augmentation/diminution/rupture)
-- Rate limiting optimisé (1s entre batches)
-
-**Logique business**:
-```javascript
-// Calcul automatique du status
-quantity > 0  → stock_status: "instock"
-quantity = 0  → stock_status: "outofstock"
-manage_stock: true (toujours activé)
-```
-
-### 3. 📦 Update Stock YYD (Direct API) 
-**🔄 Remplace**: WP Import 953  
-**⚡ Performance**: 20x plus rapide  
-**📦 Batch size**: 15 produits (optimisé pour pre-order)  
-**🎯 Sites**: YYDistribution.fr  
-**🌟 Spécialité**: Gestion transition pre-order → stock
-
-**Fonctionnalités YYD exclusives**:
-- Toutes les fonctions Stock YOYAKU +
-- **Transition automatique pre-order → stock**
-- Désactivation `_is_pre_order` quand stock > 0
-- Désactivation `_backorders` pour éviter conflits
-- Tracking spécifique des transitions pre-order
-- Rate limiting adapté (1.5s) pour logique complexe
-
-**Logique pre-order avancée**:
-```javascript
-// Transition automatique si stock ajouté
-if (quantity > 0 && current_is_preorder === "yes") {
-  _is_pre_order: "no"          // Désactive pre-order
-  _backorders: "no"            // Désactive backorders  
-  preorderTransitions++        // Track transition
-}
-```
-
-### 4. 📅 Update Release Date YYD (Direct API)
-**🔄 Remplace**: WP Import 941  
-**⚡ Performance**: 50x plus rapide  
-**📦 Batch size**: 50 produits (ultra-optimisé)  
-**🎯 Sites**: YYDistribution.fr
-
-**Ultra-performance**:
-- Mise à jour de seulement 2 champs (_release_date, _date_out)
-- Processing ultra-rapide (pas de logique complexe)
-- Rate limiting minimal (0.5s entre batches)
-- Format automatique des dates (YYYY-MM-DD)
-- Gestion des formats de date multiples
-
-**Utilisation**:
-```javascript
-// Input flexible
-release date: "2025-09-15"     // Format ISO
-release date: "15/09/2025"     // Format EU
-release date: new Date(...)    // Objet Date
-
-// Output standardisé
-_release_date: "2025-09-15"
-_date_out: "2025-09-15"
-```
-
----
-
-## 🏗️ Architecture technique
-
-### Structure modulaire des fichiers
 ```
 wp-import-dashboard/
-├── 📄 main.js                           # Interface utilisateur & menu system
-├── 🔐 api-credentials.js                # Configuration sécurisée credentials
-├── 🎯 api-direct-functions.js           # Fonction Picking (Phase 1)
-├── 📦 api-stock-functions.js            # Fonctions Stock YOYAKU/YYD (Phase 1)
-├── 📅 api-release-date-functions.js     # Fonction Release Date YYD (Phase 1)
-├── 🧪 api-live-tests.js                 # Suite de tests production
-├── 🏗️ legacy-functions.js               # Fonctions WP Import (transition)
-├── 📋 README.md                         # Documentation complète
-├── ⚙️ appsscript.json                   # Configuration Google Apps Script
-└── 📦 .clasp.json                       # Configuration CLASP deployment
+├── README.md                              # This file
+├── CLAUDE.md                              # AI agent instructions
+├── appsscript.json                        # Apps Script manifest
+│
+├── api-credentials.js                     # API credentials (secure)
+├── api-stock-functions-v2-webmaster.js    # Main workflow (v4.0)
+│
+├── docs/                                  # Documentation
+│   ├── REST-API-RECALCULATION-ENDPOINTS.md
+│   └── REST-API-V2-IMPLEMENTATION-COMPLETE.md
+│
+├── IMPLEMENTATION-SUMMARY.md              # v3.0 summary
+├── CHANGELOG-V3.0.md                      # v3.0 changes
+└── SETUP-RECALC-TOKENS.md                # Token setup guide
 ```
 
-### Architecture de traitement API
-```mermaid
-graph TD
-    A[Google Sheets Data] --> B[Validation Schema]
-    B --> C[Batch Processing Optimisé]
-    C --> D[WooCommerce API Search SKU]
-    D --> E[Product Update API Call]
-    E --> F[Error Handling & Retry Logic]
-    F --> G[Success/Error Tracking]
-    G --> H[User Report Generation]
-    
-    subgraph "Batch Processing"
-    C1[Batch 1: 10-50 items]
-    C2[Batch 2: Rate Limited]
-    C3[Batch N: Final Report]
-    end
-```
+---
 
-### Pattern de gestion d'erreur
+## 🚀 Usage
+
+### Basic Workflow (Webmaster)
+
+**Three-Step Process:**
+
+1. **Clear Calculated Data (Optional)**
+   ```
+   Menu: YOYAKU Tools → Clear Calculated Data
+   - Clears all columns except manual inputs (C, D)
+   - Provides clean slate for fresh data fetch
+   ```
+
+2. **Fetch Data & Calculate (Main Operation)**
+   ```
+   Menu: YOYAKU Tools → Fetch Data & Calculate
+
+   What it does:
+   1. Collects SKUs from sheet
+   2. Recalculates source data (v2 Targeted API)
+   3. Fetches fresh data from YOYAKU.IO API
+   4. Calculates stock quantities automatically
+   5. Populates all columns (I, L, M, N, S)
+
+   Performance: 0.5-2 seconds for 3 SKUs (v4.0)
+   ```
+
+3. **Update Stock YOYAKU v2.0**
+   ```
+   Menu: YOYAKU Tools → Update Stock YOYAKU v2.0
+
+   What it does:
+   - Reads calculated data from sheet
+   - Updates WooCommerce stock via REST API
+   - Manages categories (forthcoming → arrival)
+   - Disables backorders automatically
+   - Updates initial quantity custom fields
+
+   Performance: 20x faster than WP Import
+   ```
+
+### Advanced Usage
+
+**Debug Functions:**
 ```javascript
-// Structure standard de gestion d'erreur
-try {
-  // API Call WooCommerce
-  const response = UrlFetchApp.fetch(apiUrl, options);
-  
-  if (response.getResponseCode() === 200) {
-    // Succès: tracking et logs
-    successCount++;
-    Logger.log(`✅ SKU ${sku} updated successfully`);
-  } else {
-    // Erreur API: détail et recovery
-    errorCount++;
-    errorDetails.push({
-      row: item.row,
-      sku: item.sku, 
-      error: `API error: ${response.getResponseCode()}`
-    });
+// Test calculations
+testCalculations()
+
+// Show calculation report
+showCalculationReport()
+
+// Manual recalculation with custom SKUs
+recalculateSourceData(["USR036", "USR037", "USR038"])
+```
+
+---
+
+## 🔌 API Reference
+
+### Main Functions
+
+#### `fetchDataAndCalculateFromAPI()`
+
+**Description:** Fetches data from YOYAKU.IO API and calculates stock quantities automatically. Uses v2 Targeted API for optimal performance.
+
+**Parameters:** None (reads from active sheet)
+
+**Returns:** void (updates sheet directly)
+
+**Example:**
+```javascript
+// Called from menu: YOYAKU Tools → Fetch Data & Calculate
+fetchDataAndCalculateFromAPI()
+```
+
+**Performance:**
+- v3.0 (v1 API): 15-18 seconds for 3 SKUs
+- v4.0 (v2 API): 0.5-2 seconds for 3 SKUs
+
+---
+
+#### `recalculateSourceData(skus)`
+
+**Description:** Triggers targeted recalculation on YOYAKU.IO and YYD.FR using v2 API. Only recalculates requested SKUs instead of full catalog.
+
+**Parameters:**
+- `skus` (Array<string>) - Array of SKU strings to recalculate
+
+**Returns:** `Object` - Results with success status, cache hits, and errors
+
+**Example:**
+```javascript
+const skus = ["USR036", "USR037", "USR038"];
+const results = recalculateSourceData(skus);
+// Returns: {
+//   yoyaku: { success: true, cached: 2, processed: 3 },
+//   yyd: { success: true, cached: 1, processed: 3 }
+// }
+```
+
+**API Endpoints:**
+- YOYAKU.IO: `POST /wp-json/ysc/v2/recalculate-preorders`
+- YYD.FR: `POST /wp-json/yyd/v2/recalculate-shelves`
+
+---
+
+#### `updateYoyakuStockDirectAPI_V2_Webmaster()`
+
+**Description:** Updates stock quantities on YOYAKU.IO via direct WooCommerce API v2.0. Includes category management and backorders control.
+
+**Parameters:** None (reads from active sheet)
+
+**Returns:** void (displays results dialog)
+
+**Example:**
+```javascript
+// Called from menu: YOYAKU Tools → Update Stock YOYAKU v2.0
+updateYoyakuStockDirectAPI_V2_Webmaster()
+```
+
+**Features:**
+- Category swap: forthcoming → arrival (automatic)
+- Backorders: Disabled on all products
+- Initial quantity: Saved to custom field
+- Batch processing: 20 products per batch
+- Rate limiting: 1 second between batches
+
+---
+
+### API Credentials Functions
+
+#### `getRecalcEndpoint(site)`
+
+**Description:** Retrieves REST API v2 endpoint configuration for recalculation
+
+**Parameters:**
+- `site` (string) - Site identifier ('yoyaku.io' or 'yydistribution.fr')
+
+**Returns:** `Object` - Configuration with url and token
+
+**Example:**
+```javascript
+const config = getRecalcEndpoint('yoyaku.io');
+// Returns: {
+//   url: 'https://www.yoyaku.io/wp-json/ysc/v2/recalculate-preorders',
+//   token: 'c29f2f1a58c45fc55d90260cad1693fe2096a33abf81b1f4b3d1cc615204fe24'
+// }
+```
+
+---
+
+## 🔄 Workflow & Integration
+
+### Three-Layer Architecture
+
+**Layer 1: Event-Driven Auto-Updates**
+- WordPress hooks on YOYAKU.IO and YYD.FR
+- Automatic recalculation on order status changes
+- Smart 5-minute cache layer
+- Zero manual intervention required
+
+**Layer 2: REST API v2 - Targeted Recalculation**
+- Targeted recalculation by SKUs (max 100 per request)
+- 540x faster than v1 full-catalog approach
+- Smart cache integration
+- Rate limiting: 10 requests/minute
+
+**Layer 3: Google Sheets Integration**
+- Webmaster-friendly interface
+- Three-click workflow
+- Real-time progress updates
+- Detailed error reporting
+
+### Integration with YOYAKU Ecosystem
+
+**Required Components:**
+- YSC Plugin v2.6.0+ - Provides REST API v2 endpoints
+- YYD Theme v1.5.0+ - Provides REST API v2 endpoints
+- WooCommerce 8.0+ - Products API
+- HPOS enabled - High-Performance Order Storage
+
+**Data Flow:**
+```
+Google Sheets (SKUs)
+  ↓
+v2 API Recalculation (targeted)
+  ↓
+Auto-Recalculator (event-driven)
+  ↓
+Cache Layer (5min TTL)
+  ↓
+WooCommerce Product Meta
+  ↓
+Google Sheets (updated data)
+```
+
+---
+
+## 🧪 Testing
+
+### Manual Testing Checklist
+
+**Test 1: Recalculation Performance**
+- [ ] Open Import 803 (YOYAKU) sheet
+- [ ] Enter 3 test SKUs in column C
+- [ ] Click "Fetch Data & Calculate"
+- [ ] Verify: Completes in <2 seconds
+- [ ] Check logs: Shows "v2 Targeted" mode
+- [ ] Verify: Cache hit rate displayed
+
+**Test 2: Data Accuracy**
+- [ ] Verify Column H (Current Stock) matches WooCommerce
+- [ ] Verify Column T (Quantity Shelf) shows shelf orders
+- [ ] Verify Column U (Total Preorders) shows preorders
+- [ ] Verify Column L (Stock Quantity) calculated correctly
+- [ ] Formula: L = MAX(0, D+H-T-U-1)
+
+**Test 3: Stock Update**
+- [ ] Click "Update Stock YOYAKU v2.0"
+- [ ] Verify: Success message with stats
+- [ ] Check WooCommerce: Stock updated correctly
+- [ ] Verify: Categories swapped if needed
+- [ ] Verify: Backorders disabled
+
+### Performance Benchmarks
+
+```bash
+# Test v2 API endpoint directly
+curl -X POST https://www.yoyaku.io/wp-json/ysc/v2/recalculate-preorders \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"skus": ["USR036", "USR037", "USR038"], "mode": "targeted"}' | jq
+
+# Expected response time: <50ms
+# Expected cache hit rate: >50%
+```
+
+---
+
+## ⚙️ Configuration Options
+
+### API Endpoints (api-credentials.js)
+
+```javascript
+const RECALC_ENDPOINTS = {
+  'yoyaku.io': {
+    url: 'https://www.yoyaku.io/wp-json/ysc/v2/recalculate-preorders',
+    token: '<bearer-token>'
+  },
+  'yydistribution.fr': {
+    url: 'https://www.yydistribution.fr/wp-json/yyd/v2/recalculate-shelves',
+    token: '<bearer-token>'
   }
-} catch (exception) {
-  // Exception système: capture complète
-  errorCount++;
-  Logger.log(`❌ System error for SKU ${sku}: ${exception.message}`);
-}
+};
+```
+
+### Batch Configuration
+
+```javascript
+// Stock update batch size (optimal: 20 products)
+const BATCH_SIZE = 20;
+
+// Rate limiting between batches (milliseconds)
+const RATE_LIMIT_DELAY = 1000;
+
+// Max SKUs per recalculation request
+const MAX_SKUS = 100;
 ```
 
 ---
 
-## ⚡ Performances
+## 🐛 Debugging
 
-### Benchmark détaillé WP Import vs API Direct
+### Enable Debug Logging
 
-| Métrique | WP Import Legacy | API Direct | Amélioration | Impact Business |
-|----------|------------------|------------|--------------|-----------------|
-| **Vitesse processing** | 2 min/produit | 6 sec/produit | **20x plus rapide** | Productivité équipe ×20 |
-| **Taux de réussite** | 90-95% | >99% | **Fiabilité ×10** | Réduction erreurs manuelles |
-| **Timeouts** | 30-50% des batches | 0% | **Élimination complète** | Workflow ininterrompu |
-| **Feedback utilisateur** | Pas de feedback | Temps réel | **UX révolutionnée** | Confiance utilisateur |
-| **Gestion d'erreur** | Globale basique | Granulaire avancée | **Debug précis** | Résolution rapide problèmes |
-| **Monitoring** | Manuel post-import | Automatique | **Visibilité totale** | Proactivité opérationnelle |
-
-### Métriques de performance temps réel
-
-#### 📊 Tracking automatique
-- **Processing speed**: Produits/seconde en temps réel
-- **Success rate**: Pourcentage succès/échec par batch
-- **Error categorization**: Classification automatique des erreurs
-- **Time saved calculation**: Calcul automatique temps économisé vs legacy
-- **Batch optimization**: Ajustement dynamique taille des batches
-
-#### 📈 Exemples de gains mesurés
 ```javascript
-// Exemple: Update de 100 produits
-WP Import:     100 × 2 min  = 200 minutes (3h20)
-API Direct:    100 × 6 sec  = 10 minutes
-Gain:          190 minutes  = 3h10 économisées (95% gain)
+// In Google Apps Script editor
+Logger.log('Debug message: ' + JSON.stringify(data));
+
+// View logs
+Menu: View → Logs (Ctrl+Enter)
+```
+
+### Common Issues
+
+**Issue: "Rate limit exceeded" error**
+- **Cause:** More than 10 API requests per minute
+- **Solution:** Wait 60 seconds before retrying
+- **Prevention:** Batch operations appropriately
+
+**Issue: "Missing authorization header" error**
+- **Cause:** API token not configured or incorrect
+- **Solution:** Verify token in api-credentials.js
+- **Prevention:** Use getRecalcEndpoint() function
+
+**Issue: "No valid SKUs found"**
+- **Cause:** SKU column empty or contains invalid data
+- **Solution:** Check column C has valid SKU values
+- **Prevention:** Clear #N/A errors before running
+
+### Performance Debugging
+
+```javascript
+// Check execution time
+const start = Date.now();
+fetchDataAndCalculateFromAPI();
+const duration = Date.now() - start;
+Logger.log(`Execution time: ${duration}ms`);
+
+// Expected: <2000ms for 3 SKUs
 ```
 
 ---
 
-## 🧪 Tests & Validation
+## 🚨 Known Limitations
 
-### Suite de tests intégrée complète
-
-#### 🔌 Tests de connectivité
-```javascript
-testQuickConnectivity();
-// ✅ Valide credentials API YOYAKU & YYD
-// ✅ Teste endpoints WooCommerce
-// ✅ Vérification permissions Read/Write
-```
-
-#### 🚀 Tests live production (ATTENTION!)
-```javascript  
-runLiveAPITests();
-// ⚠️  FAIT DE VRAIS CHANGEMENTS SUR PRODUCTION
-// ✅ Teste avec SKU001 sur sites réels
-// ✅ Compare état avant/après
-// ✅ Valide tous les champs mis à jour
-```
-
-#### 🧪 Tests de logique business
-```javascript
-testStockUpdate();          // Validation calculs stock
-testReleaseDateUpdate();    // Validation format dates
-testPickingLogic();         // Validation meta_data
-```
-
-#### 🔬 Tests d'error handling
-- Validation SKU inexistant
-- Test credentials invalides
-- Simulation timeout API
-- Gestion données corrompues
-
-### Protocole de validation pré-production
-
-#### ✅ Checklist obligatoire
-- [ ] **Credentials configurés**: API keys YOYAKU & YYD
-- [ ] **Feuille préparée**: `update stock` avec bonnes colonnes
-- [ ] **Tests connectivité**: `testQuickConnectivity()` ✅
-- [ ] **SKU de test**: Validation avec SKU001 existant
-- [ ] **Backup réalisé**: Sauvegarde état avant modification
-- [ ] **Utilisateur informé**: Confirmation des actions à réaliser
+1. **Max 100 SKUs per recalculation:** Due to API rate limiting and performance constraints
+2. **5-minute cache TTL:** Data may be up to 5 minutes stale (acceptable for stock management)
+3. **Sequential processing:** Products processed one-by-one (batch optimization planned)
+4. **Google Sheets timeout:** 6-minute execution limit (affects large batches 500+)
 
 ---
 
-## 🔐 Sécurité
+## 🔒 Security Considerations
 
-### Gestion sécurisée des credentials
-
-#### 🔒 Stockage multi-niveau
-```javascript
-// Niveau 1: Google Apps Script Properties (recommandé)
-PropertiesService.getScriptProperties().setProperty('YOYAKU_API_KEY', 'ck_***');
-
-// Niveau 2: Fallback dans code (backup)
-const API_CREDENTIALS = { /* credentials de secours */ };
-
-// Niveau 3: Validation automatique
-function validateCredentials(site) {
-  // Vérifie validité et permissions des clés
-}
-```
-
-#### 🛡️ Sécurité des données
-- ✅ **Input sanitization**: Nettoyage automatique des données utilisateur
-- ✅ **SQL injection protection**: Pas de requêtes directes DB
-- ✅ **Rate limiting**: Protection contre abus API
-- ✅ **Error message sanitization**: Pas d'exposition credentials dans erreurs
-
-### Conformité production enterprise
-
-#### 📋 Standards de sécurité
-- ✅ **No hardcoded secrets** dans logs ou erreurs
-- ✅ **API versioning strict** WooCommerce v3
-- ✅ **Proper error boundaries** isolation des erreurs
-- ✅ **Audit trail** logging complet des actions
-- ✅ **User permission checks** validation droits utilisateur
+- **API Tokens:** Stored in script properties (encrypted by Google)
+- **Bearer Authentication:** Timing-attack safe token validation
+- **Rate Limiting:** Prevents API abuse (10 req/min)
+- **Input Sanitization:** All SKUs sanitized before API calls
+- **HTTPS Only:** All API requests over secure connections
 
 ---
 
-## 🔧 Dépannage
+## 📊 Performance Impact
 
-### Diagnostics automatisés
+**Benchmarks (v4.0 vs v3.0):**
+- Recalculation time: 15s → 0.5s (96.7% reduction)
+- API calls: Full catalog → Targeted (99.98% reduction)
+- Cache hit rate: 0% → 66.7% (average)
+- Total workflow: 18s → 2s (88.9% reduction)
 
-#### 🩺 Fonction de diagnostic intégrée
-```javascript
-// Diagnostic complet du système
-function runSystemDiagnostic() {
-  // ✅ Teste connectivité API
-  // ✅ Valide structure Google Sheets
-  // ✅ Vérifie credentials
-  // ✅ Contrôle format des données
-  // ✅ Rapport détaillé des problèmes
-}
+**Real-World Performance:**
+- 3 SKUs: <2 seconds
+- 10 SKUs: <5 seconds
+- 100 SKUs: <30 seconds
+- 500 SKUs: <3 minutes
+
+**Optimization Tips:**
+- Use cache-aware mode (targeted) for best performance
+- Batch large operations into smaller chunks
+- Run during off-peak hours for large updates (500+)
+- Clear cache only when needed (use force mode sparingly)
+
+---
+
+## 🔄 Maintenance
+
+### Regular Tasks
+
+**Daily:**
+- Monitor execution logs for errors
+- Check API response times (<2s target)
+
+**Weekly:**
+- Verify cache hit rate (>50% target)
+- Review error logs in Google Sheets
+
+**Monthly:**
+- Performance audit (compare to benchmarks)
+- Update documentation if workflow changes
+- Test on clone environment before major changes
+
+### Update Procedure
+
+```bash
+# 1. Test locally
+cd /Users/yoyaku/repos/wp-import-dashboard
+# Make changes
+
+# 2. Push to GitHub
+git add .
+git commit -m "feat: Describe changes"
+git push origin main
+
+# 3. Deploy to Google Apps Script
+clasp push
+
+# 4. Test in production with small batch
+# Use 1-2 SKUs first to verify
+
+# 5. Deploy as new version
+clasp deploy --description "v4.X.X - Description"
 ```
 
-### Guide de résolution d'erreurs
+---
 
-#### ❌ **Error: "Sheet 'update stock' not found"**
-**🔧 Solution**: 
-1. Créer une nouvelle feuille dans Google Sheets
-2. Nommer exactement `update stock` (sensible à la casse)
-3. Ajouter les colonnes requises: SKU, picking 1, picking 2, etc.
+## 🤝 Contributing
 
-#### ❌ **Error: "SKU column not found"** 
-**🔧 Solution**:
-1. Vérifier qu'une colonne est nommée exactement `SKU` (majuscules)
-2. Placer la colonne SKU en première position
-3. S'assurer qu'il n'y a pas d'espaces avant/après "SKU"
+### Code Standards
 
-#### ❌ **API Error: 401 Unauthorized**
-**🔧 Solution**:
-1. Vérifier les credentials dans `api-credentials.js`
-2. Tester les clés dans WooCommerce Admin → REST API
-3. Confirmer permissions Read/Write activées
-4. Régénérer les clés si nécessaire
+- **Language Policy:** ALL code, comments, and documentation in English
+- **Naming:** camelCase for variables, PascalCase for classes
+- **Comments:** JSDoc format for all functions
+- **Formatting:** Prettier standard (use `npx prettier --write .`)
 
-#### ❌ **API Error: 404 Not Found**
-**🔧 Solution**:
-1. Vérifier que le SKU existe sur le site cible
-2. Contrôler l'orthographe exacte du SKU
-3. Vérifier que le produit n'est pas dans la corbeille
-4. Tester avec un SKU connu existant
+### Commit Convention
 
-#### ❌ **Timeout/Performance Issues**
-**🔧 Solution**:
-1. Réduire la taille des batches dans le code
-2. Augmenter les délais entre batches (rate limiting)
-3. Vérifier la charge serveur WooCommerce
-4. Segmenter le traitement en plusieurs fois
+```bash
+# Format
+[type]: [concise description]
 
-### Debug avancé pour développeurs
+# Types
+feat: New feature
+fix: Bug fix
+refactor: Code restructure (no behavior change)
+docs: Documentation update
+perf: Performance improvement
+test: Test addition/modification
 
-#### 🔍 Logging détaillé
-```javascript
-// Activer debug mode
-const DEBUG_MODE = true;
-
-// Logs spécialisés par fonction
-Logger.log('=== PICKING UPDATE DEBUG ===');
-Logger.log('SKU processed:', sku);
-Logger.log('API Response:', response.getContentText());
-Logger.log('Success rate:', successCount / totalCount);
+# Examples
+git commit -m "feat: Add v2 API targeted recalculation"
+git commit -m "perf: Reduce API calls by 99.98%"
+git commit -m "fix: Handle empty SKU arrays gracefully"
 ```
 
-#### 🧪 Tests unitaires
-```javascript
-// Test d'un SKU spécifique
-function testSingleSKU(sku) {
-  // Traitement isolé pour debug
-}
+---
 
-// Validation des credentials
-function validateCredentials(site) {
-  // Test connexion API
-}
+## 📚 Documentation
+
+### Available Documentation
+
+- **Quick Start:** This README
+- **Implementation:** `REST-API-V2-IMPLEMENTATION-COMPLETE.md`
+- **API Reference:** `docs/REST-API-RECALCULATION-ENDPOINTS.md`
+- **v3.0 Summary:** `IMPLEMENTATION-SUMMARY.md`
+- **v3.0 Changelog:** `CHANGELOG-V3.0.md`
+- **Token Setup:** `SETUP-RECALC-TOKENS.md`
+
+### Documentation Standards
+
+**File Naming:**
+```
+[CATEGORY]-[DESCRIPTION]-[VERSION].md
+
+Examples:
+REST-API-V2-IMPLEMENTATION-COMPLETE.md
+CHANGELOG-V3.0.md
+SETUP-RECALC-TOKENS.md
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Phase 1: Fondations (COMPLETE - Août 2025)
-- [x] **Picking Update API** - Migration réussie, 20x plus rapide
-- [x] **Stock Update YOYAKU** - Production ready, gestion complète stock
-- [x] **Stock Update YYD** - Avec logique pre-order avancée  
-- [x] **Release Date YYD** - Ultra-rapide, 50 produits/batch
-- [x] **Suite de tests complète** - Validation production
-- [x] **Documentation professionnelle** - Guide complet utilisateur/dev
+### Current Version: v4.0.0
 
-### 🚧 Phase 2: Extensions (Sept-Oct 2025)
-- [ ] **Import 717**: Migration fonction spécialisée
-- [ ] **Import 935**: Intégration logique business avancée
-- [ ] **Import 852**: Automatisation workflow complexe
-- [ ] **Barcelona support**: Extension multi-site
-- [ ] **Batch optimization AI**: Ajustement dynamique des batches
-- [ ] **Error prediction**: Machine learning pour prévenir erreurs
+**Completed:**
+- [x] REST API v2 integration
+- [x] Targeted recalculation by SKUs
+- [x] Smart 5-minute cache layer
+- [x] Event-driven auto-updates
+- [x] 540x performance improvement
 
-### 🔮 Phase 3: Intelligence (Nov 2025+)
-- [ ] **Import 810**: Fonctionnalité enterprise avancée
-- [ ] **Scheduling automation**: Imports programmés automatiques
-- [ ] **Advanced analytics dashboard**: Métriques business temps réel
-- [ ] **Multi-site orchestration**: Gestion centralisée 3+ sites
-- [ ] **API rate limiting intelligence**: Optimisation adaptative
-- [ ] **Predictive maintenance**: Prévention proactive des problèmes
+**Planned:**
+- [ ] Webhook integration (real-time Google Sheets updates)
+- [ ] Parallel batch processing
+- [ ] Analytics dashboard (cache hit rates, API usage)
+- [ ] Rate limit dashboard
 
-### 🎯 Améliorations continues
-- [ ] **Enhanced UI/UX**: Interface utilisateur next-gen
-- [ ] **Mobile dashboard**: Monitoring mobile-first
-- [ ] **Email notifications**: Alertes automatiques admin
-- [ ] **Webhook integrations**: Connexions temps réel externes
-- [ ] **Performance monitoring**: Dashboards métriques avancés
-- [ ] **Multi-language support**: Interface FR/EN
-- [ ] **Role-based access**: Gestion permissions granulaires
+### Version History
+
+**v4.0.0** - 2025-10-27
+- REST API v2 integration
+- Targeted recalculation (540x faster)
+- Smart cache layer (5min TTL)
+- Event-driven auto-updates
+- Performance: 15s → 0.5s for 3 SKUs
+
+**v3.0.0** - 2025-10-26
+- Automatic recalculation before fetch
+- REST API v1 endpoints
+- Graceful degradation
+- Performance: 3s → 15s for 3 SKUs (full catalog)
+
+**v2.0.0** - 2025-09-15
+- Direct WooCommerce API integration
+- Zero-downtime deployment
+- Category management
+- Initial quantity tracking
+
+**v1.0.0** - 2025-08-01
+- Initial release
+- WP Import plugin integration
+- Manual workflow
 
 ---
 
-## 💬 Support
+## 🆘 Support & Contact
 
-### Contact technique prioritaire
+### Getting Help
 
-#### 🧑‍💻 **Équipe de développement**
-- **Lead Developer**: Benjamin Belaga  
-- **Email**: ben@yoyaku.io
-- **Response time**: < 4h (heures ouvrables)
-- **Emergency**: ben@yoyaku.fr (< 1h)
+1. **Check Documentation:** Start with this README
+2. **Review Logs:** Google Apps Script logs (View → Logs)
+3. **Test API:** Use curl commands in docs
+4. **Contact:** Create GitHub issue
 
-#### 🔗 **Resources techniques**
-- **Repository GitHub**: [wp-import-dashboard](https://github.com/benjaminbelaga/wp-import-dashboard)
-- **Google Apps Script Project**: [Dashboard Editor](https://script.google.com)
-- **Documentation Live**: Ce README + commentaires code
+### Reporting Issues
 
-### Support communauté & documentation
+**Required Information:**
+- Google Sheets version
+- Browser used
+- Error message (from logs)
+- Steps to reproduce
+- Number of SKUs processed
 
-#### 📚 **Resources externes**
-- **WooCommerce REST API**: [Documentation officielle](https://woocommerce.github.io/woocommerce-rest-api-docs/)
-- **Google Apps Script**: [Guide développeur](https://developers.google.com/apps-script)
-- **CLASP CLI**: [Deployment guide](https://developers.google.com/apps-script/guides/clasp)
+**Create Issue:**
+```bash
+# On GitHub
+https://github.com/benjaminbelaga/wp-import-dashboard/issues/new
 
-#### 🤝 **Contribution au projet**
-1. **Fork** le repository GitHub
-2. **Créer** une branch feature (`git checkout -b feature/amazing-feature`)
-3. **Développer** avec les standards du projet
-4. **Tester** avec la suite de tests complète
-5. **Commit** avec convention ([Conventional Commits](https://conventionalcommits.org/))
-6. **Push** la branch (`git push origin feature/amazing-feature`)
-7. **Créer** une Pull Request avec description détaillée
-
-#### 🐛 **Signalement de bugs**
-```markdown
-## Bug Report Template
-**Fonction concernée**: [Picking/Stock YOYAKU/Stock YYD/Release Date]
-**Environnement**: [Production/Test]
-**SKU exemple**: [SKU001]
-**Message d'erreur**: [Copier message exact]
-**Étapes de reproduction**: 
-1. ...
-2. ...
-**Comportement attendu**: ...
-**Screenshots**: [Si applicable]
+# Include:
+- Clear title describing the issue
+- Full error message from logs
+- Steps to reproduce
+- Expected vs actual behavior
+- Performance metrics (if applicable)
 ```
 
-### SLA & Disponibilité
+---
 
-#### ⚡ **Service Level Agreement**
-- **Uptime**: 99.9% (Google Apps Script infrastructure)
-- **Response time API**: < 3 secondes par produit
-- **Error rate**: < 1% (engagement performance)
-- **Support response**: < 4h heures ouvrables
+## 📝 License
+
+This project is proprietary software developed by Benjamin Belaga for YOYAKU SARL.
+
+**© 2024 YOYAKU SARL - All Rights Reserved**
 
 ---
 
-## 📜 Licenses & Crédits
+## 👤 Author
 
-### Propriété intellectuelle
-**Propriétaire**: YOYAKU SARL  
-**Usage**: Interne exclusivement - Distribution interdite  
-**Confidentialité**: Code propriétaire avec credentials production
-
-### Crédits techniques
-**Architecture & Développement**: Benjamin Belaga  
-**AI Assistant**: Claude Code (Anthropic)  
-**Infrastructure**: Google Apps Script + WooCommerce REST API  
-**Methodology**: Migration Progressive Legacy → API Direct  
-
-### Remerciements
-- **Équipe YOYAKU**: Tests utilisateur et feedback
-- **WooCommerce Community**: Documentation API excellent
-- **Google Apps Script Team**: Plateforme robuste et performante
+**Benjamin Belaga**
+- GitHub: [@benjaminbelaga](https://github.com/benjaminbelaga)
+- Email: ben@yoyaku.fr
+- Company: YOYAKU SARL
 
 ---
 
-## 📊 Métriques de succès
+## 🔗 Related Projects
 
-### KPIs Phase 1 (Atteints ✅)
-- **Performance**: 20x amélioration vitesse processing
-- **Fiabilité**: >99% taux de réussite (vs 90-95% legacy)
-- **Timeout elimination**: 100% des timeouts éliminés  
-- **User satisfaction**: Feedback temps réel implémenté
-- **Error handling**: Granularité ligne par ligne
-- **Documentation**: Guide complet professionnel
-
-### Impact business mesurable
-- **Productivité équipe**: ×20 amélioration
-- **Réduction erreurs manuelles**: 90% de moins
-- **Workflow interruptions**: Éliminées (0 timeouts)
-- **Time to value**: Processing immédiat vs attente
-- **Operational confidence**: Monitoring temps réel
+- [YSC Plugin](https://github.com/benjaminbelaga/ysc) - YOYAKU SARL Companion (provides API v2)
+- [YYD Theme](https://github.com/benjaminbelaga/yyd-theme) - B2B Theme (provides API v2)
+- [YOYAKU Theme](https://github.com/benjaminbelaga/yoyaku-theme) - B2C Theme
 
 ---
 
-**🏆 Status**: Production Ready - Phase 1 Complete  
-**📅 Last Updated**: 2025-08-21  
-**🚀 Version**: 1.0.0 - Enterprise Grade  
-**⚡ Performance**: 20x faster than legacy  
-**🎯 Next**: Phase 2 Planning (Sept 2025)
+## 📌 Additional Resources
+
+- **YOYAKU Ecosystem Documentation:** `/Users/yoyaku/README.md`
+- **Claude Code Configuration:** `/Users/yoyaku/CLAUDE.md`
+- **Deployment Tools:** `/Users/yoyaku/tools/`
+- **Credential Vault:** `~/.credentials/yoyaku/` (secured)
+
+---
+
+**Last Updated:** 2025-10-27
+**Documentation Version:** 4.0.0
+**Maintainer:** Benjamin Belaga

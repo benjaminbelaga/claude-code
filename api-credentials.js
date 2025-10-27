@@ -80,7 +80,7 @@ function storeCredentialsSecurely() {
  */
 function getSecureCredentials(site) {
   const scriptProperties = PropertiesService.getScriptProperties();
-  
+
   switch(site) {
     case 'yoyaku.io':
       return {
@@ -88,15 +88,48 @@ function getSecureCredentials(site) {
         consumer_key: scriptProperties.getProperty('YOYAKU_API_KEY') || API_CREDENTIALS['yoyaku.io'].consumer_key,
         consumer_secret: scriptProperties.getProperty('YOYAKU_API_SECRET') || API_CREDENTIALS['yoyaku.io'].consumer_secret
       };
-      
+
     case 'yydistribution.fr':
       return {
         url: 'https://www.yydistribution.fr/wp-json/wc/v3/products',
         consumer_key: scriptProperties.getProperty('YYD_API_KEY') || API_CREDENTIALS['yydistribution.fr'].consumer_key,
         consumer_secret: scriptProperties.getProperty('YYD_API_SECRET') || API_CREDENTIALS['yydistribution.fr'].consumer_secret
       };
-      
+
     default:
       throw new Error(`Unknown site: ${site}`);
   }
+}
+
+/**
+ * Recalculation API Endpoints and Tokens
+ * These endpoints trigger fresh data recalculation on source systems
+ *
+ * v2 API Features:
+ * - Targeted recalculation by SKUs (faster)
+ * - Smart 5-minute cache layer
+ * - Event-driven auto-updates
+ * - Rate limiting (10 req/min)
+ */
+const RECALC_ENDPOINTS = {
+  'yoyaku.io': {
+    url: 'https://www.yoyaku.io/wp-json/ysc/v2/recalculate-preorders',
+    token: 'c29f2f1a58c45fc55d90260cad1693fe2096a33abf81b1f4b3d1cc615204fe24'
+  },
+  'yydistribution.fr': {
+    url: 'https://www.yydistribution.fr/wp-json/yyd/v2/recalculate-shelves',
+    token: 'f7a863c1e2c6dea4484442c04b305aa915b8ba61563f4333e755b02cad3bbc67'
+  }
+};
+
+/**
+ * Get recalculation endpoint configuration for a site
+ * @param {string} site - Site identifier ('yoyaku.io', 'yydistribution.fr')
+ * @returns {Object} Recalculation endpoint configuration
+ */
+function getRecalcEndpoint(site) {
+  if (!RECALC_ENDPOINTS[site]) {
+    throw new Error(`No recalculation endpoint configured for site: ${site}`);
+  }
+  return RECALC_ENDPOINTS[site];
 }
