@@ -7,9 +7,28 @@
  * - Auto mode: Future staleness detection
  *
  * @author Benjamin Belaga
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2025-10-27
  */
+
+/**
+ * Global Configuration for Smart Wrapper
+ * Override these values to customize behavior
+ */
+const SMART_WRAPPER_CONFIG = {
+  // Database write wait time after v3 recalculation
+  // Default: 500ms (optimized from 1000ms)
+  // Increase to 1000ms if data inconsistency observed
+  dbWriteWaitMs: 500,
+
+  // Staleness threshold for auto mode (future feature)
+  // Default: 5 minutes (300000ms)
+  stalenessThresholdMs: 300000,
+
+  // Enable detailed logging for debugging
+  // Default: false
+  verboseLogging: false
+};
 
 /**
  * Smart Fetch: Choose best API automatically
@@ -93,8 +112,14 @@ function executeRecalculateThenFetchStrategy(skus, site, startTime) {
   }
 
   // Wait for DB write to complete
-  Logger.log('   ⏳ Waiting for DB write (1s)...');
-  Utilities.sleep(1000);
+  // Optimized: 500ms is sufficient for most cases (tested 2025-10-27)
+  // Can be configured via SMART_WRAPPER_CONFIG if needed
+  const waitTime = typeof SMART_WRAPPER_CONFIG !== 'undefined' && SMART_WRAPPER_CONFIG.dbWriteWaitMs
+    ? SMART_WRAPPER_CONFIG.dbWriteWaitMs
+    : 500; // Default: 500ms (was 1000ms)
+
+  Logger.log(`   ⏳ Waiting for DB write (${waitTime}ms)...`);
+  Utilities.sleep(waitTime);
 
   // Step 2: Fetch fresh data with v2 Connector
   Logger.log('   📡 Step 2: Fetching fresh data with v2 Connector...');
@@ -492,3 +517,4 @@ function clearOldMetrics(daysToKeep = 30) {
     Logger.log(`❌ Error cleaning metrics: ${error.message}`);
   }
 }
+
