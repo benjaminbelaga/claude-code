@@ -202,52 +202,55 @@ function fallbackToV1(skus) {
 /**
  * Process sheet with v2 API (batch optimized)
  *
- * This function replaces the old fetchAndCalculateStockV3() workflow
- * with the new v2 batch API for massive performance gains.
+ * This function intelligently detects rows that need processing:
+ * - Rows with SKU in column C (not empty)
+ * - Rows with empty image in column A (needs data)
  *
  * Usage in Google Sheets:
- * 1. Select rows with SKUs in column A
- * 2. Run this function from menu
- * 3. All SKUs are processed in a single batch request (100x faster!)
+ * 1. Just run from menu (no need to select rows!)
+ * 2. All rows with SKU + empty image are processed automatically
+ * 3. Ultra-fast batch processing (100x faster than v1!)
  *
- * @param {Range} selectedRange - Optional range, uses active range if not provided
+ * @param {Range} selectedRange - Optional range, auto-detects if not provided
  */
 function fetchAndCalculateStockV2Connector(selectedRange) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-  if (!selectedRange) {
-    selectedRange = sheet.getActiveRange();
-  }
-
-  const startRow = selectedRange.getRow();
-  const numRows = selectedRange.getNumRows();
-
   Logger.log('\n=== FETCH & CALCULATE (V2 YOYAKU CONNECTOR) ===');
-  Logger.log(`Processing ${numRows} rows...`);
 
-  // Collect all SKUs from selected range
-  const skuColumn = 1; // Column A
+  // Smart detection: Find all rows with SKU but empty image
+  const lastRow = sheet.getLastRow();
+  const imageCol = 1;  // Column A (Image)
+  const skuCol = 3;    // Column C (SKU)
+
   const skus = [];
   const rowMap = {}; // Map SKU to row number
 
-  for (let i = 0; i < numRows; i++) {
-    const row = startRow + i;
-    const sku = sheet.getRange(row, skuColumn).getValue();
+  // Scan all rows (starting from row 2, assuming row 1 is header)
+  for (let row = 2; row <= lastRow; row++) {
+    const imageValue = sheet.getRange(row, imageCol).getValue();
+    const skuValue = sheet.getRange(row, skuCol).getValue();
 
-    if (sku && sku.toString().trim() !== '') {
-      const skuStr = sku.toString().trim();
-      skus.push(skuStr);
-      rowMap[skuStr] = row;
+    // Process if: SKU exists AND image is empty
+    if (skuValue && skuValue.toString().trim() !== '') {
+      const hasImage = imageValue && imageValue.toString().trim() !== '';
+
+      if (!hasImage) {
+        const skuStr = skuValue.toString().trim();
+        skus.push(skuStr);
+        rowMap[skuStr] = row;
+        Logger.log(`✓ Row ${row}: SKU ${skuStr} needs processing (no image)`);
+      }
     }
   }
 
   if (skus.length === 0) {
-    Logger.log('⚠️  No valid SKUs found in selection');
-    SpreadsheetApp.getUi().alert('No valid SKUs found in selected range');
+    Logger.log('⚠️  No rows need processing (all have images or no SKUs)');
+    SpreadsheetApp.getUi().alert('No rows to process!\n\nAll rows either:\n• Already have images, or\n• Have no SKU in column C');
     return;
   }
 
-  Logger.log(`Collected ${skus.length} SKUs for batch processing`);
+  Logger.log(`\n📊 Found ${skus.length} rows to process`);
 
   // Fetch all data in ONE batch request (ultra-fast!)
   const apiResponse = fetchStockDataV2Connector(skus);
@@ -272,9 +275,11 @@ function fetchAndCalculateStockV2Connector(selectedRange) {
     }
 
     try {
-      // Column indices (adjust to your sheet structure)
+      // Column indices for YOYAKU dashboard
+      const imageCol = 1;      // Column A: Image
       const preorderCol = 20;  // Column U: Total Preorders
       const shelfCol = 19;     // Column T: Quantity Shelf
+      const imageUrlCol = 26;  // Column Z: Image URL (raw)
 
       // Update preorders (U)
       sheet.getRange(row, preorderCol + 1).setValue(productData.preorder_count);
@@ -282,11 +287,23 @@ function fetchAndCalculateStockV2Connector(selectedRange) {
       // Update shelf count (T)
       sheet.getRange(row, shelfCol + 1).setValue(productData.shelf_count);
 
-      // Optional: Add status indicator
-      if (productData.skipped) {
-        Logger.log(`⚡ SKU ${sku}: SKIPPED (${productData.reason}) - 0 preorders, 0 shelf`);
+      // Update image if URL is provided
+      if (productData.image_url) {
+        // Z: Raw image URL
+        sheet.getRange(row, imageUrlCol).setValue(productData.image_url);
+
+        // A: Image formula =IMAGE(Z)
+        const imageFormulaCell = `Z${row}`;
+        sheet.getRange(row, imageCol).setFormula(`=IMAGE(${imageFormulaCell})`);
+
+        Logger.log(`✅ SKU ${sku}: preorders=${productData.preorder_count}, shelf=${productData.shelf_count}, image=${productData.image_url.substring(0, 50)}...`);
       } else {
-        Logger.log(`✅ SKU ${sku}: preorders=${productData.preorder_count}, shelf=${productData.shelf_count}`);
+        // No image available
+        if (productData.skipped) {
+          Logger.log(`⚡ SKU ${sku}: SKIPPED (${productData.reason}) - 0 preorders, 0 shelf, no image`);
+        } else {
+          Logger.log(`✅ SKU ${sku}: preorders=${productData.preorder_count}, shelf=${productData.shelf_count}, no image`);
+        }
       }
 
       successCount++;
