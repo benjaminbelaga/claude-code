@@ -7,6 +7,83 @@ et ce projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [3.0.0] - 2025-10-29 🚀
+
+### ✨ Added - V3 Update Shelves with Batch Parallel + Smart Skip
+
+**🎯 Major Release:** Complete performance overhaul with 7-9x speedup
+
+#### Menu Rename (User-Friendly)
+- **📊 Standard Mode**: Quick fetch without shelves/preorders (columns A-N, no T/U)
+- **⚡ Update Shelves Mode**: Complete fetch with batch parallel (all columns A-U)
+- **Removed**: V2 ULTRA (obsolete, replaced by V3)
+
+#### V3 Core Features
+- **Batch Parallel Fetch**: `UrlFetchApp.fetchAll()` - all SKUs fetched simultaneously
+- **Smart Skip Logic**: Analyzes column P (YYD yes/no) before recalculation
+  - Skips YYD.FR recalc if 0 YYD products (~2s saved)
+  - Skips YOYAKU.IO recalc if 0 YOYAKU products (~2s saved)
+- **Smart Backend Detection**:
+  - Only queries `total_preorders` if backorders enabled
+  - Only queries `shelf_quantity` if product on YYD (column P = yes)
+- **7-Field Optimized Mode**: 4 numbers + image + distributor + stock_status (~350 bytes)
+
+#### Performance Benchmarks
+- **42 SKUs**: 7-9 seconds (V3) vs 60 seconds (V2 Ultra) = **7-9x faster**
+- **Smart Skip**: Saves 2-4 seconds per site when 0 products
+- **Batch Parallel**: All API requests in single batch instead of sequential loop
+
+#### Critical Fixes
+- **🖼️ Image Formula**: Column A now uses `=IMAGE(url)` instead of plain text URL
+- **🏢 Distributor Taxonomy**: Fixed backend from `musicdistributor` → `distributormusic`
+  - Tested: `curl` returns `"distributor_music": "yydistribution"` ✅
+  - Column B now populates correctly
+
+#### API Enhancements
+- **New Endpoint Mode**: `?fields=numbers-plus&smart=true&on_yyd={bool}`
+- **Smart Parameters**:
+  - `smart=true`: Enable conditional queries
+  - `on_yyd=true/false`: Controls shelf_quantity fetch
+- **Response**: 7 fields optimized for Google Sheets display
+
+#### Documentation Overhaul
+- **README.md**: 11 sections completely rewritten
+  - Architecture diagram updated with smart detection flow
+  - User Guide: Standard vs Update Shelves comparison
+  - API Documentation: numbers-plus mode detailed
+  - Performance: Real 42 SKU benchmarks
+- **Version**: Bumped to 3.0.0-update-shelves
+
+#### Files Modified
+- `main.js`: Menu rename, V2 ULTRA removed
+- `api-stock-functions-v3-ultra-ultra.js`: Complete V3 implementation
+- `rest-api-product-stock.php`: Distributor taxonomy fix (backend)
+- `README.md`: Complete documentation refresh
+
+#### Deployment
+- **Git Commit**: 5d28b8d - "feat: V3.0 Update Shelves"
+- **CLASP Push**: 39 files deployed to Google Sheets ✅
+- **Backend**: Deployed via SFTP to production ✅
+- **Status**: Live and tested ✅
+
+### 🔧 Changed
+- Menu items renamed for clarity (no more version numbers in UI)
+- Fetch workflow: Sequential → Batch parallel
+- Recalculation: Always run → Smart skip based on analysis
+- Column A: Plain URL → IMAGE() formula
+
+### 🐛 Fixed
+- Distributor taxonomy wrong name (was breaking column B)
+- Image display in Google Sheets (was showing URL text)
+- Sequential API requests causing 60s delays for 42 SKUs
+
+### 📚 Documentation
+- **README.md**: Architecture, User Guide, API docs, Performance benchmarks
+- **CHANGELOG.md**: This entry
+- **Git commit message**: Detailed V3 feature breakdown
+
+---
+
 ## [1.2.0] - 2025-10-23 🎵
 
 ### ✨ Ajouté - Distributor Music Auto-Fetch

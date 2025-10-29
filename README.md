@@ -629,4 +629,4 @@ Unauthorized copying, modification, or distribution prohibited.
 
 **Maintained by:** Benjamin Belaga
 **Last Updated:** 2025-10-29
-**Version:** 2.0.0-ultra-optimized
+**Version:** 3.0.0-update-shelves
