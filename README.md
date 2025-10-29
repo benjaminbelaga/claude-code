@@ -1,6 +1,6 @@
 # YOYAKU Import Dashboard - Google Sheets Stock Management
 
-**Version:** 2.0.0-ultra-optimized
+**Version:** 3.0.0-update-shelves
 **Author:** Benjamin Belaga
 **Last Updated:** 2025-10-29
 **License:** Proprietary - YOYAKU SARL
@@ -35,7 +35,8 @@ The **YOYAKU Import Dashboard** is a Google Sheets-based inventory management sy
 
 - **Zero Formulas Required**: Webmasters work with plain numbers, calculations happen automatically
 - **3-Click Workflow**: Clear → Fetch → Update (complete stock update in 3 clicks)
-- **Ultra-Optimized Performance**: 3x faster than standard mode, 45% smaller payloads
+- **Ultra-Fast Performance**: 7-9x faster with batch parallel fetch + smart skip logic
+- **Smart Detection**: Automatically skips unnecessary queries based on product metadata
 - **Automatic Metadata**: Release dates, categories, and calculations happen automatically
 - **Real-Time Sync**: Direct WooCommerce API integration with bidirectional data flow
 - **HPOS Compatible**: Works with WooCommerce High-Performance Order Storage
@@ -50,7 +51,7 @@ The **YOYAKU Import Dashboard** is a Google Sheets-based inventory management sy
 
 ### Business Context
 
-**Problem Solved:** Manual stock updates for 800+ products took hours and was error-prone. Google Sheets workflow with v1 API took 15-18 seconds for 3 SKUs due to full-catalog recalculation. Webmasters needed a fast, reliable way to manage stock directly from spreadsheets.
+**Problem Solved:** Manual stock updates for 800+ products took hours and was error-prone. Google Sheets workflow with v1 API took 15-18 seconds for 3 SKUs due to full-catalog recalculation. V2 improved to 5 seconds for 3 SKUs, but V2 Ultra had sequential requests (60s for 42 SKUs). V3 solves this with batch parallel fetch + smart skip logic (7-9s for 42 SKUs = 7-9x faster).
 
 **Revenue Impact:** Critical - Direct impact on inventory accuracy and order fulfillment
 
@@ -60,9 +61,9 @@ The **YOYAKU Import Dashboard** is a Google Sheets-based inventory management sy
 
 ### Core Features
 
-- **Dual-Mode API Fetching**
-  - Standard Mode: All 9 metadata fields (images, taxonomies, stock data)
-  - Ultra-Optimized Mode: Only 4 numeric fields (3x faster, 45% smaller payload)
+- **Dual-Mode API Fetching (V3)**
+  - Standard Mode: 9 fields, no shelves/preorders (fast, simple)
+  - Update Shelves Mode: 7 fields with batch parallel + smart skip (7-9x faster, complete)
 
 - **Automatic Calculations**
   - Initial Quantity: `I = J + D`
@@ -89,13 +90,16 @@ The **YOYAKU Import Dashboard** is a Google Sheets-based inventory management sy
   - Payload size measurement
   - Cache hit rate monitoring
 
-### New in V2.0 Ultra-Optimized (2025-10-29)
+### New in V3.0 Update Shelves (2025-10-29)
 
-- ⚡ **Ultra-Optimized Fetch**: 3x faster than standard V2 (fetches only numbers)
+- ⚡ **Batch Parallel Fetch**: 7-9x faster with `UrlFetchApp.fetchAll()` (all SKUs simultaneously)
+- 🧠 **Smart Skip Logic**: Analyzes column P, skips YYD recalc if 0 YYD products
+- 🎯 **Smart Backend Detection**: Only queries preorders if backorders enabled, shelves if on YYD
+- 📊 **7-Field Mode**: 4 numbers + image + distributor + stock_status (~350 bytes)
+- 🖼️ **Image Formula**: Column A uses `=IMAGE()` formula for direct display
+- 🏢 **Distributor Fix**: Corrected taxonomy name `distributormusic` (was broken)
 - 📅 **Automatic Release Date**: Sets `_release_date` to TODAY on stock update
 - 🏷️ **Automatic Category Swap**: Forthcoming (4044) → Arrivals (12538)
-- 🧪 **Performance Testing**: Built-in V2 vs Ultra comparison tool
-- 📊 **Real-Time Metrics**: Execution time, payload size, cache hits in UI
 
 ---
 
@@ -106,10 +110,10 @@ The **YOYAKU Import Dashboard** is a Google Sheets-based inventory management sy
 **3-Click Workflow:**
 
 1. **Clear (Optional)**: Menu → ⚡ Update Stock → 🧹 Clear Calculated Data
-2. **Fetch**: Menu → ⚡ Update Stock → ⚡ Fetch Data & Calculate (ULTRA)
+2. **Fetch**: Menu → ⚡ Update Stock → ⚡ Fetch Data & Calculate (Update Shelves)
 3. **Update**: Menu → ⚡ Update Stock → 📦 Update Stock YOYAKU v2.0
 
-**Expected Time**: 10-20 products in 10 seconds
+**Expected Time**: 10-20 products in 10 seconds, 42 products in 7-9 seconds
 
 ### For Developers (Deploying Changes)
 
@@ -150,23 +154,29 @@ curl -s 'https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data/YOYAKU005' |
 Google Sheets (UI - Zero formulas)
       ↓
 Google Apps Script (Server-Side JS)
-      ├─> Standard V2 Mode (9 fields, 2-3 KB)
-      └─> Ultra-Optimized Mode (4 fields, 0.8 KB) ← NEW!
+      ├─> Standard Mode (9 fields, no T/U)
+      └─> Update Shelves Mode (7 fields + batch parallel) ← V3!
       ↓
-Recalculation API v2 (Targeted - Cache-aware)
-      ├─> YOYAKU.IO preorders (HPOS)
-      └─> YYD.FR shelf quantities
+Smart Analysis (Column P - YYD detection)
+      ├─> Skip YYD recalc if 0 YYD products
+      └─> Skip YOYAKU recalc if 0 YOYAKU products
+      ↓
+Batch Parallel Fetch (UrlFetchApp.fetchAll)
+      └─> All SKUs fetched simultaneously (7-9x faster)
       ↓
 REST API Endpoint (YIO Plugin)
       GET /wp-json/yoyaku/v1/product-stock-data/{sku}
-      ├─> ?fields=all (standard mode)
-      └─> ?fields=numbers (ultra mode) ← NEW!
+      ├─> ?fields=all (standard mode - 9 fields)
+      └─> ?fields=numbers-plus&smart=true&on_yyd={P} ← V3!
+          ├─> Smart: skip shelves if on_yyd=false
+          └─> Smart: skip preorders if backorders=no
       ↓
 WooCommerce Database (HPOS)
       ├─> wp_wc_orders (67,471+ orders)
-      ├─> wp_wc_order_product_lookup (preorders)
+      ├─> wp_wc_order_product_lookup (preorders - conditional)
       ├─> wp_posts (products, 21,000+)
-      └─> wp_postmeta (custom fields)
+      ├─> wp_postmeta (custom fields - conditional shelves)
+      └─> wp_term_relationships (distributormusic taxonomy)
 ```
 
 ### File Structure
@@ -288,19 +298,34 @@ Menu → ⚡ Update Stock → 🧹 Clear Calculated Data
 
 #### STEP 2: Fetch Data & Calculate
 
-**Recommended:** Menu → ⚡ Update Stock → **⚡ Fetch Data & Calculate (ULTRA)**
+**Two Modes Available:**
 
-**What it does:**
-1. Recalculates preorders/shelves (YOUR SKUs only - 540x faster)
-2. Fetches ONLY 4 numbers from API (3x faster, 45% smaller)
-3. Calculates I, L, M, N, S automatically (same formulas as standard)
+**Option A: 📊 Fetch Data & Calculate (Standard)**
+- Updates columns: A, B, C, E, F, G, H, J, K, M, N
+- Does NOT update: T (Shelves), U (Preorders)
+- Use case: Quick fetch without B2B shelf data
+- Speed: Fast (no HPOS preorder queries)
+
+**Option B: ⚡ Fetch Data & Calculate (Update Shelves)** ← **RECOMMENDED**
+- Updates columns: ALL (A-U complete)
+- Includes: T (Shelves), U (Preorders)
+- Use case: Full stock update with B2B data
+- Speed: Ultra-fast (7-9x faster with batch parallel + smart skip)
+
+**What it does (Update Shelves mode):**
+1. Smart analysis: Reads column P (YYD yes/no) to skip unnecessary queries
+2. Batch parallel fetch: All SKUs fetched simultaneously (not sequential)
+3. Smart recalculation: Skips YYD.FR if no YYD products, skips YOYAKU.IO if no YOYAKU products
+4. Fetches 7 fields: 4 numbers + image + distributor + stock_status
+5. Calculates I, L, M, N, S automatically
 
 **Result:**
 ```
-📊 Fetch & Calculate Complete (ULTRA-OPTIMIZED)!
-✅ Successfully processed: 10 SKUs
-⚡ Total time: 3.2 seconds (3x faster!)
-📦 Payload: ~2.2 KB (45% smaller)
+📊 Fetch & Calculate Complete (Update Shelves)!
+✅ Successfully processed: 42 SKUs
+⚡ Total time: 7.8 seconds (7-9x faster!)
+📦 Payload: ~14.7 KB (smart optimization)
+🧠 Smart skip: YYD recalc skipped (0 YYD products)
 ```
 
 #### STEP 3: Update Stock YOYAKU v2.0
@@ -343,14 +368,14 @@ Menu → ⚡ Update Stock → **📦 Update Stock YOYAKU v2.0**
 
 **Base URL:** `https://www.yoyaku.io/wp-json/yoyaku/v1/product-stock-data`
 
-#### Ultra-Optimized Mode (Recommended)
+#### Update Shelves Mode (V3 - Recommended)
 
 **Request:**
 ```bash
-GET /product-stock-data/{sku}?fields=numbers
+GET /product-stock-data/{sku}?fields=numbers-plus&smart=true&on_yyd=false
 ```
 
-**Response (220 bytes - 46% smaller):**
+**Response (~350 bytes - 7 fields with smart detection):**
 ```json
 {
   "found": true,
@@ -359,14 +384,22 @@ GET /product-stock-data/{sku}?fields=numbers
   "initial_quantity": 100,
   "shelf_quantity": 0,
   "total_preorders": 0,
+  "image_url": "https://yoyaku.io/wp-content/uploads/2022/11/YOYAKU005_sleeve.jpg",
+  "distributor_music": "yydistribution",
+  "stock_status": "instock",
   "_meta": {
-    "mode": "numbers",
-    "execution_time": "6.12ms",
-    "timestamp": "2025-10-29 10:00:00",
+    "mode": "numbers-plus",
+    "execution_time": "8.34ms",
+    "timestamp": "2025-10-29 15:00:00",
     "version": "1.0.0"
   }
 }
 ```
+
+**Smart Detection Features:**
+- `on_yyd=false` → Backend skips `shelf_quantity` query (saves ~2ms)
+- `smart=true` + backorders disabled → Backend skips `total_preorders` HPOS query (saves ~5ms)
+- Returns 7 fields: 4 numbers + 3 essentials (image, distributor, stock_status)
 
 #### Standard Mode (All Fields)
 
@@ -401,20 +434,21 @@ GET /product-stock-data/{sku}?fields=all
 
 ### Field Comparison
 
-| Field | Ultra Mode | Standard Mode |
-|-------|------------|---------------|
+| Field | Update Shelves (V3) | Standard Mode |
+|-------|---------------------|---------------|
 | stock_quantity | ✅ | ✅ |
 | initial_quantity | ✅ | ✅ |
-| shelf_quantity | ✅ | ✅ |
-| total_preorders | ✅ | ✅ |
+| shelf_quantity | ✅ (smart skip) | ✅ |
+| total_preorders | ✅ (smart skip) | ✅ |
+| image_url | ✅ | ✅ |
+| distributor_music | ✅ | ✅ |
+| stock_status | ✅ | ✅ |
 | product_id | ❌ | ✅ |
-| image_url | ❌ | ✅ |
-| distributor_music | ❌ | ✅ |
-| stock_status | ❌ | ✅ |
 | depot_vente | ❌ | ✅ |
 | is_online | ❌ | ✅ |
-| **Payload Size** | **220 bytes** | **407 bytes** |
-| **Improvement** | **-46%** | Baseline |
+| **Payload Size** | **~350 bytes** | **407 bytes** |
+| **Fields Returned** | **7 optimized** | **9 complete** |
+| **Smart Detection** | **✅ Yes** | **❌ No** |
 
 ---
 
@@ -423,19 +457,24 @@ GET /product-stock-data/{sku}?fields=all
 ### Real Production Benchmarks (2025-10-29)
 
 **Single SKU:**
-- Ultra Mode: 220 bytes, 6.12ms
+- Update Shelves (V3): ~350 bytes, 8.34ms
 - Standard Mode: 407 bytes, 6.93ms
-- **Improvement:** 46% smaller payload
+- **Smart Features:** Conditional queries (saves 2-7ms per SKU)
 
-**Bulk Performance (100 SKUs):**
-- Ultra Mode: 8 seconds, 22 KB
-- Standard Mode: 15 seconds, 40 KB
-- **Savings:** 47% faster, 45% smaller
+**Bulk Performance (42 SKUs - Real Test):**
+- V3 Update Shelves (Batch Parallel): 7-9 seconds, ~14.7 KB
+- V2 Ultra (Sequential): 60 seconds, ~9.2 KB
+- **Speedup:** 7-9x faster with batch parallel `fetchAll()`
 
-**Recalculation (v2 Targeted):**
-- v3.0 Full Site (21k SKUs): 15 seconds
-- v2 Targeted (3 SKUs): 0.5 seconds
-- **Speedup:** 30x faster
+**Smart Recalculation:**
+- V3 with smart skip (0 YYD products): Skips YYD recalc entirely (~2s saved)
+- V3 with smart skip (0 YOYAKU products): Skips YOYAKU recalc entirely (~2s saved)
+- **Benefit:** Only processes SKUs that need processing
+
+**Expected Performance by SKU Count:**
+- 10 SKUs: 2-3 seconds
+- 42 SKUs: 7-9 seconds
+- 100 SKUs: 15-18 seconds
 
 ### Expected Performance
 

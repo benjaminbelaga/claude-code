@@ -29,8 +29,8 @@ function onOpen() {
 
   // 🆕 WEBMASTER EDITION v2.0 - 3-CLICK WORKFLOW (ZERO FORMULAS)
   apiDirectMenu.addItem('🧹 Clear Calculated Data', 'clearCalculatedData');
-  apiDirectMenu.addItem('📊 Fetch Data & Calculate', 'fetchDataAndCalculateFromAPI');
-  apiDirectMenu.addItem('⚡ Fetch Data & Calculate (ULTRA)', 'fetchDataAndCalculateFromAPI_UltraOptimized');
+  apiDirectMenu.addItem('📊 Fetch Data & Calculate (Standard)', 'fetchDataAndCalculateFromAPI');
+  apiDirectMenu.addItem('⚡ Fetch Data & Calculate (Update Shelves)', 'fetchDataAndCalculateFromAPI_V3_UltraUltra');
   apiDirectMenu.addItem('📦 Update Stock YOYAKU v2.0', 'updateYoyakuStockDirectAPI_V2_Webmaster');
   apiDirectMenu.addSeparator();
 
