@@ -30,7 +30,12 @@ function onOpen() {
   // 🆕 WEBMASTER EDITION v2.0 - 3-CLICK WORKFLOW (ZERO FORMULAS)
   apiDirectMenu.addItem('🧹 Clear Calculated Data', 'clearCalculatedData');
   apiDirectMenu.addItem('📊 Fetch Data & Calculate', 'fetchDataAndCalculateFromAPI');
+  apiDirectMenu.addItem('⚡ Fetch Data & Calculate (ULTRA)', 'fetchDataAndCalculateFromAPI_UltraOptimized');
   apiDirectMenu.addItem('📦 Update Stock YOYAKU v2.0', 'updateYoyakuStockDirectAPI_V2_Webmaster');
+  apiDirectMenu.addSeparator();
+
+  // Performance Testing
+  apiDirectMenu.addItem('🧪 Test Performance (V2 vs Ultra)', 'testPerformanceV2vsUltra');
   apiDirectMenu.addSeparator();
 
   // Other Updates Submenu

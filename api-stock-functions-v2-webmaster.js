@@ -646,6 +646,7 @@ function updateYoyakuStockDirectAPI_V2_Webmaster() {
     '• Stock from column L (calculated)\n' +
     '• Initial quantity saved from column I\n' +
     '• Categories: forthcoming → arrival (auto-swap)\n' +
+    '• Release date: Auto-set to TODAY\n' +
     '• Backorders: Disabled on all products\n' +
     '• Negative stock: Protected\n\n' +
     '✅ Performance:\n' +
@@ -750,7 +751,8 @@ function updateYoyakuStockDirectAPI_V2_Webmaster() {
       outOfStock: 0,
       categoriesUpdated: 0,
       backordersDisabled: 0,
-      initialQtySaved: 0
+      initialQtySaved: 0,
+      releaseDatesUpdated: 0
     };
 
     for (let i = 0; i < batches.length; i++) {
@@ -772,6 +774,7 @@ function updateYoyakuStockDirectAPI_V2_Webmaster() {
         stockChanges.categoriesUpdated += result.stockChanges.categoriesUpdated || 0;
         stockChanges.backordersDisabled += result.stockChanges.backordersDisabled || 0;
         stockChanges.initialQtySaved += result.stockChanges.initialQtySaved || 0;
+        stockChanges.releaseDatesUpdated += result.stockChanges.releaseDatesUpdated || 0;
       }
 
       if (result.errorDetails && result.errorDetails.length > 0) {
@@ -794,6 +797,7 @@ function updateYoyakuStockDirectAPI_V2_Webmaster() {
     message += `⚠️ Out of stock: ${stockChanges.outOfStock}\n`;
     message += `\n🆕 V2.0 Features:\n`;
     message += `🏷️ Categories swapped (forthcoming→arrival): ${stockChanges.categoriesUpdated}\n`;
+    message += `📅 Release dates updated to TODAY: ${stockChanges.releaseDatesUpdated}\n`;
     message += `🚫 Backorders disabled: ${stockChanges.backordersDisabled}\n`;
     message += `📊 Initial quantities saved: ${stockChanges.initialQtySaved}\n`;
 
@@ -851,7 +855,8 @@ function updateStockBatchV2(batch, site = 'yoyaku.io') {
     outOfStock: 0,
     categoriesUpdated: 0,
     backordersDisabled: 0,
-    initialQtySaved: 0
+    initialQtySaved: 0,
+    releaseDatesUpdated: 0
   };
 
   batch.forEach(item => {
@@ -932,6 +937,30 @@ function updateStockBatchV2(batch, site = 'yoyaku.io') {
             });
             stockChanges.initialQtySaved++;
           }
+
+          // AUTOMATIC: Set release date to TODAY when stock is updated
+          // This marks products as "arrived" with the current date
+          const todayDate = new Date();
+          const releaseDateFormatted = Utilities.formatDate(
+            todayDate,
+            Session.getScriptTimeZone(),
+            'yyyy-MM-dd'
+          );
+
+          updatePayload.meta_data = updatePayload.meta_data || [];
+          updatePayload.meta_data.push({
+            key: '_release_date',
+            value: releaseDateFormatted
+          });
+
+          // Also update WooCommerce standard date_on_sale_from (if product goes live)
+          if (item.quantity > 0) {
+            updatePayload.date_on_sale_from = releaseDateFormatted;
+            updatePayload.date_on_sale_from_gmt = releaseDateFormatted;
+          }
+
+          stockChanges.releaseDatesUpdated++;
+          Logger.log(`  📅 SKU ${item.sku}: Release date set to ${releaseDateFormatted}`);
 
           // Update the product
           const updateUrl = `${WOO_API_URL}/${productId}`;
