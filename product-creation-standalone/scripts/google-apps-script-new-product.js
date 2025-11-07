@@ -27,6 +27,8 @@ function onOpen() {
     .addItem('✅ Create/Update selected product', 'menuCreateSelected')
     .addItem('📊 Bulk import (all rows)', 'menuBulkImport')
     .addItem('🔍 Validate selected row', 'menuValidateRow')
+    .addSeparator()
+    .addItem('🔄 Auto-generate missing columns', 'menuAutoGenerateColumns')
     .addToUi();
 }
 
@@ -155,6 +157,436 @@ function menuBulkImport() {
     'Errors: ' + stats.errors + '\n\n' +
     (errors.length ? 'Errors:\n' + errors.slice(0, 5).join('\n') : '')
   );
+}
+
+function menuAutoGenerateColumns() {
+  const sh = SpreadsheetApp.getActiveSheet();
+  const row = sh.getActiveRange().getRow();
+
+  if (row === 1) {
+    SpreadsheetApp.getUi().alert('⚠️ Please select a data row (not the header)');
+    return;
+  }
+
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const values = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+
+  const record = {};
+  headers.forEach((h, i) => {
+    record[h] = values[i] == null ? '' : String(values[i]);
+  });
+
+  // Generate missing columns
+  SpreadsheetApp.getUi().alert('⏳ Generating missing columns...\n\nSKU: ' + record.SKU);
+
+  try {
+    const generated = autoGenerateMissingColumns_(record);
+
+    // Write back to sheet
+    headers.forEach((h, colIdx) => {
+      if (generated.hasOwnProperty(h)) {
+        sh.getRange(row, colIdx + 1).setValue(generated[h]);
+      }
+    });
+
+    SpreadsheetApp.getUi().alert(
+      '✅ Success!\n\n' +
+      'Generated columns:\n' +
+      Object.keys(generated).map(k => '- ' + k + ': ' + (generated[k] || 'N/A')).join('\n')
+    );
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('❌ Error\n\n' + e.message);
+  }
+}
+
+// ============================================================================
+// AUTO-GENERATION LOGIC
+// ============================================================================
+
+/**
+ * Auto-generate missing columns from existing data
+ *
+ * Generates (based on upload-dashboard logic):
+ * - weight (from format)
+ * - price net (from Price Gross + distributor margin)
+ * - price yydistribution (B2B price)
+ * - price yoyaku.io (B2C price)
+ * - slug (from artist1 + title + SKU)
+ * - playlist_files (from Number of tracks + track1-24)
+ * - IMAGE Serveur (check image existence)
+ * - MP3 Serveur (check MP3 existence)
+ * - PACK MEDIA Serveur (determine if complete)
+ * - _wp_old_slug (from SKU)
+ *
+ * @param {Object} r - Record object with all columns
+ * @return {Object} Object with generated column values
+ */
+function autoGenerateMissingColumns_(r) {
+  const generated = {};
+
+  // 1. Calculate weight (from format)
+  if (!r.weight || String(r.weight).trim() === '') {
+    generated.weight = calculateWeight_(r.format);
+  }
+
+  // 2. Calculate price net (from Price Gross + distributor)
+  const priceGross = parseFloat(String(r['Price Gross'] || '0').replace(',', '.'));
+  if (priceGross > 0 && (!r['price net'] || String(r['price net']).trim() === '')) {
+    generated['price net'] = calculatePriceNet_(priceGross, r.Distributor);
+  }
+
+  // 3. Calculate price yydistribution (B2B)
+  const priceNet = parseFloat(String(r['price net'] || generated['price net'] || '0').replace(',', '.'));
+  if (priceNet > 0 && (!r['price yydistribution'] || String(r['price yydistribution']).trim() === '')) {
+    generated['price yydistribution'] = calculatePriceB2B_(priceNet, r.Distributor);
+  }
+
+  // 4. Calculate price yoyaku.io (B2C)
+  const priceB2B = parseFloat(String(r['price yydistribution'] || generated['price yydistribution'] || '0').replace(',', '.'));
+  if (priceB2B > 0 && (!r['price yoyaku,io'] || String(r['price yoyaku,io']).trim() === '')) {
+    generated['price yoyaku,io'] = calculatePriceB2C_(priceB2B);
+  }
+
+  // 5. Generate slug (from artist1 + title + SKU)
+  if (!r.slug || String(r.slug).trim() === '') {
+    generated.slug = generateProductSlug_(r.artist1, r.title, r.SKU);
+  }
+
+  // 6. Generate playlist_files (from tracklist OR Number of tracks + track1-24)
+  if (!r.playlist_files || String(r.playlist_files).trim() === '') {
+    if (r.tracklist && String(r.tracklist).trim() !== '') {
+      // Use tracklist if available (preferred)
+      generated.playlist_files = generatePlaylistFromTracklist_(r.SKU, r.tracklist);
+    } else {
+      // Fallback to track1-track24
+      const numTracks = parseInt(r['Number of tracks'] || 0);
+      if (numTracks > 0) {
+        const trackNames = [];
+        for (let i = 1; i <= numTracks; i++) {
+          const trackName = r['track' + i] || ('Track ' + i);
+          trackNames.push(trackName);
+        }
+        generated.playlist_files = generatePlaylist_(numTracks, trackNames, r.SKU);
+      }
+    }
+  }
+
+  // 7. Check IMAGE Serveur
+  const imageStatus = checkImageStatus_(r.SKU);
+  generated['IMAGE Serveur'] = imageStatus;
+
+  // 8. Check MP3 Serveur
+  const numTracks = parseInt(r['Number of tracks'] || 0);
+  const mp3Status = checkMP3Status_(r.SKU, numTracks);
+  generated['MP3 Serveur'] = mp3Status;
+
+  // 9. Determine PACK MEDIA Serveur
+  generated['PACK MEDIA Serveur'] = determinePackStatus_(imageStatus, mp3Status);
+
+  // 10. Generate _wp_old_slug (from SKU)
+  if (!r._wp_old_slug || String(r._wp_old_slug).trim() === '') {
+    generated._wp_old_slug = String(r.SKU).toUpperCase();
+  }
+
+  return generated;
+}
+
+// ============================================================================
+// CALCULATION HELPERS (Upload Dashboard Logic)
+// ============================================================================
+
+/**
+ * Calculate shipping weight from format string
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * @param {string} format - Format string (e.g., "12\"", "2x12\"", "LP")
+ * @return {number} Weight in kg
+ */
+function calculateWeight_(format) {
+  if (!format) return 0.3;
+
+  const normalized = String(format).toLowerCase().trim();
+
+  // Multi-LP patterns
+  const multiLPMap = {
+    '10x12"': 2.0, '9x12"': 1.8, '8x12"': 1.6, '7x12"': 1.4,
+    '6x12"': 1.2, '5x12"': 1.0, '4x12"': 0.8, '3x12"': 0.6, '2x12"': 0.4
+  };
+
+  for (const pattern in multiLPMap) {
+    if (normalized.includes(pattern.toLowerCase())) {
+      return multiLPMap[pattern];
+    }
+  }
+
+  // Single LP/12"
+  if (/12"|12inch|lp/i.test(normalized)) return 0.2;
+  if (/10"/i.test(normalized)) return 0.11;
+  if (/7"/i.test(normalized)) return 0.06;
+
+  return 0.3; // Default
+}
+
+/**
+ * Calculate net price after distributor margin
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * @param {number} priceGross - Gross price from distributor
+ * @param {string} distributorSlug - Distributor slug
+ * @return {number} Net price (rounded to 2 decimals)
+ */
+function calculatePriceNet_(priceGross, distributorSlug) {
+  const distributors = {
+    'telegraphe': { margin: 0.969, currency: 'EUR' },
+    'sushitech': { margin: 0.969, currency: 'EUR' },
+    'bigwax': { margin: 0.90, currency: 'EUR' },
+    'subwax': { margin: 0.88, currency: 'EUR' },
+    'yydistribution': { margin: 1.0, currency: 'EUR' }, // No margin
+    'prime direct': { margin: 1.01, currency: 'EUR' },
+    'rubadub': { margin: 1.06, currency: 'EUR' },
+    'deejay': { margin: 1.0, currency: 'EUR' }
+  };
+
+  const slug = String(distributorSlug || '').toLowerCase().trim();
+  const config = distributors[slug];
+
+  if (!config) {
+    Logger.log('Unknown distributor: ' + distributorSlug + ', using default margin 0.969');
+    return Math.round(priceGross * 0.969 * 100) / 100;
+  }
+
+  const priceNet = priceGross * config.margin;
+  return Math.round(priceNet * 100) / 100;
+}
+
+/**
+ * Calculate B2B price for YYD.FR
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * @param {number} priceNet - Net price
+ * @param {string} distributorSlug - Distributor slug
+ * @return {number} B2B price (rounded to 2 decimals)
+ */
+function calculatePriceB2B_(priceNet, distributorSlug) {
+  const distributors = {
+    'telegraphe': 1.25,
+    'sushitech': 1.25,
+    'bigwax': 1.25,
+    'subwax': 1.25,
+    'yydistribution': 1.0,
+    'prime direct': 1.25,
+    'rubadub': 1.25,
+    'deejay': 1.0
+  };
+
+  const slug = String(distributorSlug || '').toLowerCase().trim();
+  const multiplier = distributors[slug] || 1.25;
+
+  return Math.round(priceNet * multiplier * 100) / 100;
+}
+
+/**
+ * Calculate B2C price for YOYAKU.IO
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * @param {number} priceB2B - B2B price
+ * @return {number} B2C price (rounded to 1 decimal)
+ */
+function calculatePriceB2C_(priceB2B) {
+  const basePrice = priceB2B * 1.25;
+  return Math.round(basePrice * 10) / 10;
+}
+
+/**
+ * Generate WordPress product slug
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * Format: artist-title-sku (lowercase, no accents, hyphenated)
+ *
+ * @param {string} artist - Primary artist
+ * @param {string} title - Product title
+ * @param {string} sku - Product SKU
+ * @return {string} Generated slug
+ */
+function generateProductSlug_(artist, title, sku) {
+  if (!title || !sku) return '';
+
+  const primaryArtist = String(artist || '').trim();
+  let cleanTitle = String(title).trim();
+
+  // Remove artist from title if duplicated
+  if (primaryArtist && cleanTitle.startsWith(primaryArtist)) {
+    cleanTitle = cleanTitle.replace(primaryArtist + ' - ', '').trim();
+  }
+
+  // Combine parts
+  const parts = [primaryArtist, cleanTitle, sku].filter(p => p.length > 0);
+
+  // Normalize
+  const slug = parts
+    .join('-')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/-+/g, '-') // Remove duplicate hyphens
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+  return slug;
+}
+
+/**
+ * Generate playlist from tracklist (preferred method)
+ * Based on upload-dashboard/lib/utils/calculations.ts
+ *
+ * @param {string} sku - Product SKU
+ * @param {string} tracklist - Tracklist (newline-separated)
+ * @return {string} Playlist in format: trackname||URL##trackname||URL...
+ */
+function generatePlaylistFromTracklist_(sku, tracklist) {
+  if (!tracklist) return '';
+
+  const baseUrl = 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/mp3/';
+  const tracks = String(tracklist)
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  const parts = [];
+  tracks.forEach((trackName, index) => {
+    const trackUrl = baseUrl + sku + '_' + (index + 1) + '.mp3';
+    parts.push(trackName + '||' + trackUrl);
+  });
+
+  return parts.join('##');
+}
+
+/**
+ * Generate playlist in format: trackname||URL##trackname||URL...
+ *
+ * @param {number} numTracks - Number of tracks
+ * @param {Array<string>} trackNames - Array of track names
+ * @param {string} sku - Product SKU
+ * @return {string} Generated playlist
+ */
+function generatePlaylist_(numTracks, trackNames, sku) {
+  if (!numTracks || numTracks === 0) return '';
+
+  const baseUrl = 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/mp3/';
+  const parts = [];
+
+  for (let i = 0; i < numTracks; i++) {
+    const trackName = trackNames[i] || ('Track ' + (i + 1));
+    const trackUrl = baseUrl + sku + '_' + (i + 1) + '.mp3';
+    parts.push(trackName + '||' + trackUrl);
+  }
+
+  return parts.join('##');
+}
+
+/**
+ * Check if images exist for SKU
+ *
+ * @param {string} sku - Product SKU
+ * @return {string} Status: "Working (format, variants)" or "NO (Not Found)"
+ */
+function checkImageStatus_(sku) {
+  const base = 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/';
+  const formats = ['webp', 'jpg', 'jpeg', 'png'];
+  const variants = ['', '_1', '_2', '_3', '_4', '_5', '_6', '_7', '_8', '_9', '_10'];
+
+  const foundFormats = new Set();
+  const foundVariants = new Set();
+
+  variants.forEach(variant => {
+    formats.forEach(format => {
+      const url = base + sku + variant + '.' + format;
+
+      try {
+        const resp = UrlFetchApp.fetch(url, {
+          method: 'head',
+          muteHttpExceptions: true,
+          followRedirects: false
+        });
+
+        if (resp.getResponseCode() === 200) {
+          foundFormats.add(format);
+          foundVariants.add(variant || 'no_suffix');
+        }
+      } catch (e) {
+        // Skip
+      }
+    });
+  });
+
+  if (foundFormats.size === 0) {
+    return 'NO (Not Found)';
+  }
+
+  const formatStr = Array.from(foundFormats).join(', ');
+  const variantStr = Array.from(foundVariants).join(', ');
+  return 'Working (' + formatStr + ', ' + variantStr + ')';
+}
+
+/**
+ * Check if MP3s exist for SKU
+ *
+ * @param {string} sku - Product SKU
+ * @param {number} numTracks - Expected number of tracks
+ * @return {string} Status: "Working (format, variants)" or "NO (Not Found)"
+ */
+function checkMP3Status_(sku, numTracks) {
+  if (!numTracks || numTracks === 0) {
+    return 'NO (No tracks specified)';
+  }
+
+  const base = 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/mp3/';
+  let foundCount = 0;
+
+  for (let i = 1; i <= numTracks; i++) {
+    const url = base + sku + '_' + i + '.mp3';
+
+    try {
+      const resp = UrlFetchApp.fetch(url, {
+        method: 'head',
+        muteHttpExceptions: true,
+        followRedirects: false
+      });
+
+      if (resp.getResponseCode() === 200) {
+        foundCount++;
+      }
+    } catch (e) {
+      // Skip
+    }
+  }
+
+  if (foundCount === 0) {
+    return 'NO (Not Found)';
+  }
+
+  if (foundCount === numTracks) {
+    return 'Working (mp3, _1 to _' + numTracks + ')';
+  }
+
+  return 'Partial (' + foundCount + '/' + numTracks + ' found)';
+}
+
+/**
+ * Determine PACK MEDIA Serveur status
+ *
+ * @param {string} imageStatus - Image status
+ * @param {string} mp3Status - MP3 status
+ * @return {string} "Online" if both working, "Not Online (403)" otherwise
+ */
+function determinePackStatus_(imageStatus, mp3Status) {
+  const imageOk = imageStatus.startsWith('Working');
+  const mp3Ok = mp3Status.startsWith('Working');
+
+  if (imageOk && mp3Ok) {
+    return 'Online';
+  }
+
+  return 'Not Online (403)';
 }
 
 // ============================================================================

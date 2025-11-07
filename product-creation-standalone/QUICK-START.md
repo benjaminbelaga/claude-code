@@ -108,6 +108,64 @@ ssh yoyaku-cloudways "cd applications/jfnkmjmfer/public_html && \
 
 ---
 
+## 🔄 Auto-Generate Missing Columns (NEW!)
+
+**Replace Google Sheets formulas with one-click automation**
+
+### What it generates:
+
+1. **weight** - From format (12", 2x12", LP, etc.)
+2. **price net** - From Price Gross + distributor margin
+3. **price yydistribution** - B2B price (net × multiplier)
+4. **price yoyaku.io** - B2C price (B2B × 1.25, rounded)
+5. **slug** - From artist1 + title + SKU (WordPress-friendly)
+6. **playlist_files** - From tracklist OR track1-24
+7. **IMAGE Serveur** - Check image existence (multi-format)
+8. **MP3 Serveur** - Check MP3 existence
+9. **PACK MEDIA Serveur** - Determine if complete (Online/Not Online)
+10. **_wp_old_slug** - From SKU (uppercase)
+
+### How to use:
+
+1. Fill columns A-S (Distributor, SKU, Price Gross, title, format, etc.)
+2. Select a data row
+3. **Menu → YOYAKU • WP IMPORT → 🔄 Auto-generate missing columns**
+4. Wait ~5-10 seconds (verifies images & MP3s)
+5. Columns T-BI auto-filled!
+
+### Example:
+
+**Before:**
+```
+Distributor: prime direct
+SKU: CBR003
+Price Gross: 9.1
+format: 12"
+title: Benedikt Frey - Aid Kit
+artist1: Benedikt Frey
+tracklist: A1 - Aid Kit
+A2 - Aid Kit (Carl Finlow Remix)
+B1 - Tender
+B2 - Tides
+```
+
+**After auto-generation:**
+```
+weight: 0.2
+price net: 9.19
+price yydistribution: 11.49
+price yoyaku.io: 14.4
+slug: benedikt-frey-aid-kit-cbr003
+playlist_files: A1 - Aid Kit||https://.../_1.mp3##A2 - Aid Kit (Carl Finlow Remix)||https://.../_2.mp3##...
+IMAGE Serveur: Working (jpg, _1)
+MP3 Serveur: Working (mp3, _1 to _4)
+PACK MEDIA Serveur: Online
+```
+
+**No more formulas needed!** 🎉
+
+---
+
 ## 🚀 Next Steps
 
 ### Add Real Product

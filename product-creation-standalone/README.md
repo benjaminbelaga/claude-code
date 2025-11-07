@@ -18,6 +18,7 @@ This is a **standalone Google Apps Script** version of the YOYAKU product creati
 - 🔄 **Idempotent by SKU** (find-or-create, no duplicates)
 - ✅ **WP All Import #852 Compliant** (100% field compatibility)
 - 🚀 **Single or Bulk Import** (select rows or process all)
+- 🆕 **Auto-Generate Missing Columns** (replace formulas with one click!)
 
 ### Difference from Main Import Dashboard
 
