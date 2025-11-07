@@ -1481,14 +1481,16 @@ function setupScriptProperties() {
   Logger.log('   - YOYAKU_API_BEARER_TOKEN: ' + yoyakuToken.substring(0, 10) + '...');
   Logger.log('   - WC_BASE_URL: ' + yoyakuBaseUrl);
 
-  // YYD.FR Configuration (OPTIONAL - uncomment and add token if needed)
-  // const yydToken = 'YOUR_YYD_TOKEN_HERE';
-  // const yydBaseUrl = 'https://yydistribution.fr/wp-json';
-  // scriptProperties.setProperty('YOYAKU_API_BEARER_TOKEN_YYD', yydToken);
-  // scriptProperties.setProperty('WC_BASE_URL_YYD', yydBaseUrl);
-  // Logger.log('✅ YYD.FR configuration set successfully');
+  // YYD.FR Configuration (B2B - now active!)
+  const yydToken = 'b5d41ad4797c562c41b42d41f1328554debead46a8ebc340943efd4d7b5676b2';
+  const yydBaseUrl = 'https://yydistribution.fr/wp-json';
+  scriptProperties.setProperty('YOYAKU_API_BEARER_TOKEN_YYD', yydToken);
+  scriptProperties.setProperty('WC_BASE_URL_YYD', yydBaseUrl);
+  Logger.log('✅ YYD.FR configuration set successfully');
+  Logger.log('   - YOYAKU_API_BEARER_TOKEN_YYD: ' + yydToken.substring(0, 10) + '...');
+  Logger.log('   - WC_BASE_URL_YYD: ' + yydBaseUrl);
 
-  return 'Script Properties configured successfully! YOYAKU.IO is ready to use.';
+  return 'Script Properties configured successfully! YOYAKU.IO + YYD.FR are ready to use.';
 }
 
 /**
