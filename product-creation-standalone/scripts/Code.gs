@@ -36,9 +36,16 @@ function onOpen() {
     .addItem('New Product on yoyaku.io (API)', 'menuCreateYoyaku')
     .addItem('New Product on yydistribution.fr (API)', 'menuCreateYYD');
 
+  // Submenu: Configuration
+  const configMenu = ui.createMenu('⚙️ Configuration')
+    .addItem('🔧 Setup Script Properties (First Time)', 'menuSetupScriptProperties')
+    .addItem('✅ Verify Configuration', 'menuVerifyScriptProperties');
+
   // Add submenu and other items to main menu
   menu
     .addSubMenu(newProductMenu)
+    .addSeparator()
+    .addSubMenu(configMenu)
     .addSeparator()
     .addItem('📊 Bulk import (all rows)', 'menuBulkImport')
     .addItem('🔍 Validate selected row', 'menuValidateRow')
@@ -253,6 +260,58 @@ function menuAutoGenerateColumns() {
     );
   } catch (e) {
     SpreadsheetApp.getUi().alert('❌ Error\n\n' + e.message);
+  }
+}
+
+function menuSetupScriptProperties() {
+  const ui = SpreadsheetApp.getUi();
+
+  const response = ui.alert(
+    '🔧 Setup Script Properties',
+    'This will configure YOYAKU_API_BEARER_TOKEN and WC_BASE_URL for YOYAKU.IO.\n\n' +
+    'This only needs to be done ONCE.\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response !== ui.Button.YES) {
+    return;
+  }
+
+  try {
+    const result = setupScriptProperties();
+    ui.alert('✅ Configuration Complete!\n\n' + result);
+  } catch (e) {
+    ui.alert('❌ Error\n\n' + e.message);
+  }
+}
+
+function menuVerifyScriptProperties() {
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    const results = verifyScriptProperties();
+
+    const yoyakuStatus = (results.yoyaku.token.startsWith('✅') && results.yoyaku.baseUrl.startsWith('✅'))
+      ? '✅ CONFIGURED'
+      : '❌ MISSING';
+
+    const yydStatus = (results.yyd.token.startsWith('✅') && results.yyd.baseUrl.startsWith('✅'))
+      ? '✅ CONFIGURED'
+      : '⚠️ NOT CONFIGURED';
+
+    ui.alert(
+      '⚙️ Configuration Status',
+      'YOYAKU.IO: ' + yoyakuStatus + '\n' +
+      '  Token: ' + results.yoyaku.token + '\n' +
+      '  Base URL: ' + results.yoyaku.baseUrl + '\n\n' +
+      'YYD.FR: ' + yydStatus + '\n' +
+      '  Token: ' + results.yyd.token + '\n' +
+      '  Base URL: ' + results.yyd.baseUrl,
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    ui.alert('❌ Error\n\n' + e.message);
   }
 }
 
@@ -1393,4 +1452,76 @@ function assignCustomTaxonomies_(productId, map, site) {
   }
 
   Logger.log('[' + site.toUpperCase() + '] Custom taxonomies assigned to product ' + productId);
+}
+
+// ============================================================================
+// AUTOMATIC SETUP - Run once to configure Script Properties
+// ============================================================================
+
+/**
+ * Configures Script Properties automatically
+ * Run with: clasp run setupScriptProperties
+ *
+ * This function will:
+ * 1. Set YOYAKU_API_BEARER_TOKEN for YOYAKU.IO
+ * 2. Set WC_BASE_URL for YOYAKU.IO
+ * 3. Optionally set YYD properties if tokens are provided
+ */
+function setupScriptProperties() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+
+  // YOYAKU.IO Configuration (REQUIRED)
+  const yoyakuToken = '5190d79295f463935067b4b7e57f9de95c28e251646abcfc4c39f3abb6f64b50';
+  const yoyakuBaseUrl = 'https://yoyaku.io/wp-json';
+
+  scriptProperties.setProperty('YOYAKU_API_BEARER_TOKEN', yoyakuToken);
+  scriptProperties.setProperty('WC_BASE_URL', yoyakuBaseUrl);
+
+  Logger.log('✅ YOYAKU.IO configuration set successfully');
+  Logger.log('   - YOYAKU_API_BEARER_TOKEN: ' + yoyakuToken.substring(0, 10) + '...');
+  Logger.log('   - WC_BASE_URL: ' + yoyakuBaseUrl);
+
+  // YYD.FR Configuration (OPTIONAL - uncomment and add token if needed)
+  // const yydToken = 'YOUR_YYD_TOKEN_HERE';
+  // const yydBaseUrl = 'https://yydistribution.fr/wp-json';
+  // scriptProperties.setProperty('YOYAKU_API_BEARER_TOKEN_YYD', yydToken);
+  // scriptProperties.setProperty('WC_BASE_URL_YYD', yydBaseUrl);
+  // Logger.log('✅ YYD.FR configuration set successfully');
+
+  return 'Script Properties configured successfully! YOYAKU.IO is ready to use.';
+}
+
+/**
+ * Verifies Script Properties are correctly configured
+ * Run with: clasp run verifyScriptProperties
+ */
+function verifyScriptProperties() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+
+  const yoyakuToken = scriptProperties.getProperty('YOYAKU_API_BEARER_TOKEN');
+  const yoyakuBaseUrl = scriptProperties.getProperty('WC_BASE_URL');
+  const yydToken = scriptProperties.getProperty('YOYAKU_API_BEARER_TOKEN_YYD');
+  const yydBaseUrl = scriptProperties.getProperty('WC_BASE_URL_YYD');
+
+  const results = {
+    yoyaku: {
+      token: yoyakuToken ? '✅ Set (' + yoyakuToken.substring(0, 10) + '...)' : '❌ Missing',
+      baseUrl: yoyakuBaseUrl ? '✅ Set (' + yoyakuBaseUrl + ')' : '❌ Missing'
+    },
+    yyd: {
+      token: yydToken ? '✅ Set (' + yydToken.substring(0, 10) + '...)' : '⚠️ Not configured (optional)',
+      baseUrl: yydBaseUrl ? '✅ Set (' + yydBaseUrl + ')' : '⚠️ Not configured (optional)'
+    }
+  };
+
+  Logger.log('=== Script Properties Status ===');
+  Logger.log('YOYAKU.IO:');
+  Logger.log('  Token: ' + results.yoyaku.token);
+  Logger.log('  Base URL: ' + results.yoyaku.baseUrl);
+  Logger.log('');
+  Logger.log('YYD.FR:');
+  Logger.log('  Token: ' + results.yyd.token);
+  Logger.log('  Base URL: ' + results.yyd.baseUrl);
+
+  return results;
 }
