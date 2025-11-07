@@ -72,6 +72,21 @@ function onOpen() {
 
   const yydMenu = ui.createMenu('📦 YYDistribution Tools');
   yydMenu.addItem('Import products', 'runYYDImport');
+  yydMenu.addSeparator();
+
+  // Import 935 - Create New Products (API v2.3.0)
+  const import935Menu = ui.createMenu('🚀 Create New Products (Import 935)');
+  import935Menu.addItem('📦 Create New Products (API v2.3.0)', 'processImport935NewProductsAPI');
+  import935Menu.addSeparator();
+  import935Menu.addItem('🧪 Test Import 935 API', 'testImport935API');
+  import935Menu.addItem('🔍 Validate Configuration', 'validateImport935Config');
+  import935Menu.addItem('📊 View Dashboard', 'showImport935Dashboard');
+  import935Menu.addSeparator();
+  import935Menu.addItem('⚙️ Setup Configuration', 'setupImport935Configuration');
+  import935Menu.addSeparator();
+  import935Menu.addItem('📋 Legacy WP Import Instructions', 'showLegacyImport935Instructions');
+  yydMenu.addSubMenu(import935Menu);
+
   menu.addSubMenu(yydMenu);
 
   const barcelonaMenu = ui.createMenu('🏬 BARCELONA Tools');

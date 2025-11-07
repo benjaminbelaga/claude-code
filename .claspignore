@@ -1,0 +1,11 @@
+appsscript.json
+.git/
+.github/
+docs/
+node_modules/
+*.md
+*.txt
+.gitignore
+*.php
+yoyaku-api-connector/
+product-creation-standalone/
