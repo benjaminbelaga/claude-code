@@ -40,7 +40,9 @@ TEST001 | Test Artist - Test Album | test-artist-test-album | DEEJAY | Test Reco
 
 1. Click **⚙️ Project Settings**
 2. Scroll to **Script Properties**
-3. Click **Add property** (3 times):
+3. Click **Add property** for each site:
+
+**YOYAKU.IO (B2C) - Required:**
 
 | Property | Value |
 |----------|-------|
@@ -48,10 +50,33 @@ TEST001 | Test Artist - Test Album | test-artist-test-album | DEEJAY | Test Reco
 | `WC_CONSUMER_KEY` | `ck_...` (get from WordPress) |
 | `WC_CONSUMER_SECRET` | `cs_...` (get from WordPress) |
 
+**YYD.FR (B2B) - Optional (if using YYD features):**
+
+| Property | Value |
+|----------|-------|
+| `WC_BASE_URL_YYD` | `https://yydistribution.fr/wp-json` |
+| `WC_CONSUMER_KEY_YYD` | `ck_...` (get from WordPress) |
+| `WC_CONSUMER_SECRET_YYD` | `cs_...` (get from WordPress) |
+
+**Custom Taxonomies (Optional - for both sites):**
+
+| Property | Value |
+|----------|-------|
+| `WP_APP_USER` | WordPress username (YOYAKU.IO) |
+| `WP_APP_PASSWORD` | Application password (YOYAKU.IO) |
+| `WP_APP_USER_YYD` | WordPress username (YYD.FR) |
+| `WP_APP_PASSWORD_YYD` | Application password (YYD.FR) |
+
 **Get WooCommerce keys:**
 ```
 WordPress Admin → WooCommerce → Settings → Advanced → REST API
 → Add Key → Copy keys
+```
+
+**Get WordPress Application Password:**
+```
+WordPress Admin → Users → Your Profile → Application Passwords
+→ Add New → Copy password
 ```
 
 ---
@@ -69,7 +94,7 @@ WordPress Admin → WooCommerce → Settings → Advanced → REST API
 1. **Refresh your Google Sheet** (close & reopen)
 2. You should see menu: **YOYAKU • WP IMPORT**
 3. Select your test row (row 2)
-4. **Menu → YOYAKU • WP IMPORT → ✅ Create/Update selected product**
+4. **Menu → YOYAKU • WP IMPORT → New Product (API) → New Product on yoyaku.io (API)**
 5. Wait ~2 seconds
 6. Success alert! 🎉
 

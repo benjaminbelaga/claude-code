@@ -22,13 +22,23 @@
 // ============================================================================
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('YOYAKU • WP IMPORT')
-    .addItem('✅ Create/Update selected product', 'menuCreateSelected')
+  const ui = SpreadsheetApp.getUi();
+
+  // Main menu
+  const menu = ui.createMenu('YOYAKU • WP IMPORT');
+
+  // Submenu: New Product (API)
+  const newProductMenu = ui.createMenu('New Product (API)')
+    .addItem('🔄 Auto-generate missing columns', 'menuAutoGenerateColumns')
+    .addItem('New Product on yoyaku.io (API)', 'menuCreateYoyaku')
+    .addItem('New Product on yydistribution.fr (API)', 'menuCreateYYD');
+
+  // Add submenu and other items to main menu
+  menu
+    .addSubMenu(newProductMenu)
+    .addSeparator()
     .addItem('📊 Bulk import (all rows)', 'menuBulkImport')
     .addItem('🔍 Validate selected row', 'menuValidateRow')
-    .addSeparator()
-    .addItem('🔄 Auto-generate missing columns', 'menuAutoGenerateColumns')
     .addToUi();
 }
 
@@ -36,7 +46,7 @@ function onOpen() {
 // MENU HANDLERS
 // ============================================================================
 
-function menuCreateSelected() {
+function menuCreateYoyaku() {
   const sh = SpreadsheetApp.getActiveSheet();
   const row = sh.getActiveRange().getRow();
 
@@ -54,20 +64,62 @@ function menuCreateSelected() {
   });
 
   // Validate
-  const validation = validateProduct(record);
+  const validation = validateProduct(record, 'yoyaku');
   if (!validation.valid) {
     SpreadsheetApp.getUi().alert('❌ Validation Error\n\n' + validation.errors.join('\n'));
     return;
   }
 
-  // Create/Update
-  SpreadsheetApp.getUi().alert('⏳ Processing product...\n\nSKU: ' + record.sku);
+  // Create/Update on YOYAKU.IO
+  SpreadsheetApp.getUi().alert('⏳ Processing product on YOYAKU.IO...\n\nSKU: ' + record.sku);
 
-  const res = newProductViaAPI(record);
+  const res = newProductYoyaku(record);
 
   if (res.success) {
     SpreadsheetApp.getUi().alert(
-      '✅ Success!\n\n' +
+      '✅ Success on YOYAKU.IO!\n\n' +
+      'Product: ' + res.sku + '\n' +
+      'ID: ' + res.id + '\n' +
+      'Images found: ' + (res.imagesCount || 0) + '\n' +
+      'URL: ' + (res.url || 'N/A')
+    );
+  } else {
+    SpreadsheetApp.getUi().alert('❌ Error\n\n' + res.error);
+  }
+}
+
+function menuCreateYYD() {
+  const sh = SpreadsheetApp.getActiveSheet();
+  const row = sh.getActiveRange().getRow();
+
+  if (row === 1) {
+    SpreadsheetApp.getUi().alert('⚠️ Please select a data row (not the header)');
+    return;
+  }
+
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const values = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+
+  const record = {};
+  headers.forEach((h, i) => {
+    record[h] = values[i] == null ? '' : String(values[i]);
+  });
+
+  // Validate
+  const validation = validateProduct(record, 'yyd');
+  if (!validation.valid) {
+    SpreadsheetApp.getUi().alert('❌ Validation Error\n\n' + validation.errors.join('\n'));
+    return;
+  }
+
+  // Create/Update on YYD.FR
+  SpreadsheetApp.getUi().alert('⏳ Processing product on YYD.FR...\n\nSKU: ' + record.sku);
+
+  const res = newProductYYD(record);
+
+  if (res.success) {
+    SpreadsheetApp.getUi().alert(
+      '✅ Success on YYD.FR!\n\n' +
       'Product: ' + res.sku + '\n' +
       'ID: ' + res.id + '\n' +
       'Images found: ' + (res.imagesCount || 0) + '\n' +
@@ -593,25 +645,41 @@ function determinePackStatus_(imageStatus, mp3Status) {
 // VALIDATION
 // ============================================================================
 
-function validateProduct(r) {
+function validateProduct(r, site) {
   const errors = [];
+  site = site || 'yoyaku'; // Default to yoyaku
 
-  // Required fields
-  const required = ['sku', 'title', 'slug', 'distributor', 'label', 'priceyoyakuio'];
-  required.forEach(field => {
+  // Required fields (common)
+  const commonRequired = ['sku', 'title', 'distributor', 'label'];
+  commonRequired.forEach(field => {
     if (!r[field] || String(r[field]).trim() === '') {
       errors.push('Missing required field: ' + field);
     }
   });
 
-  // Slug format
+  // Site-specific required fields
+  if (site === 'yoyaku') {
+    if (!r['priceyoyakuio'] || String(r['priceyoyakuio']).trim() === '') {
+      errors.push('Missing required field: priceyoyakuio');
+    }
+    if (!r.slug || String(r.slug).trim() === '') {
+      errors.push('Missing required field: slug');
+    }
+  } else if (site === 'yyd') {
+    if (!r['price yydistribution'] && !r['priceyydistribution']) {
+      errors.push('Missing required field: price yydistribution');
+    }
+  }
+
+  // Slug format (if provided)
   if (r.slug && !/^[a-z0-9-]+$/.test(String(r.slug))) {
     errors.push('Slug must be lowercase alphanumeric with hyphens only');
   }
 
-  // Price validation
-  if (r.priceyoyakuio) {
-    const price = parseFloat(r.priceyoyakuio);
+  // Price validation (site-specific)
+  const priceField = site === 'yoyaku' ? 'priceyoyakuio' : 'price yydistribution';
+  if (r[priceField]) {
+    const price = parseFloat(String(r[priceField]).replace(',', '.'));
     if (isNaN(price) || price <= 0) {
       errors.push('Price must be a positive number');
     }
@@ -634,38 +702,38 @@ function validateProduct(r) {
 }
 
 // ============================================================================
-// MAIN API LOGIC
+// MAIN API LOGIC - YOYAKU.IO
 // ============================================================================
 
-function newProductViaAPI(r) {
+function newProductYoyaku(r) {
   try {
     // Validate
-    const validation = validateProduct(r);
+    const validation = validateProduct(r, 'yoyaku');
     if (!validation.valid) {
       throw new Error('Validation failed: ' + validation.errors.join(', '));
     }
 
     // Ensure category "Forthcoming" exists
-    const forthId = ensureCategoryIdByName_('Forthcoming');
+    const forthId = ensureCategoryIdByName_('Forthcoming', 'yoyaku');
 
     // Ensure tags exist
-    const tagIds = ensureTagIds_([r.tag1, r.tag2].filter(Boolean));
+    const tagIds = ensureTagIds_([r.tag1, r.tag2].filter(Boolean), 'yoyaku');
 
-    // Build WooCommerce payload
-    const payload = buildWooPayloadFromRow_(r, forthId, tagIds);
+    // Build WooCommerce payload for YOYAKU.IO
+    const payload = buildWooPayloadYoyaku_(r, forthId, tagIds);
 
     // Find existing product by SKU
-    const existing = wooGet_('/products', { sku: r.sku });
+    const existing = wooGet_('/products', { sku: r.sku }, 'yoyaku');
 
     let product;
     if (Array.isArray(existing) && existing.length > 0) {
       // Update existing
-      product = wooPut_('/products/' + existing[0].id, payload);
-      Logger.log('Updated product: ' + product.id);
+      product = wooPut_('/products/' + existing[0].id, payload, 'yoyaku');
+      Logger.log('[YOYAKU] Updated product: ' + product.id);
     } else {
       // Create new
-      product = wooPost_('/products', payload);
-      Logger.log('Created product: ' + product.id);
+      product = wooPost_('/products', payload, 'yoyaku');
+      Logger.log('[YOYAKU] Created product: ' + product.id);
     }
 
     // Optional: Assign custom taxonomies via /wp/v2
@@ -675,9 +743,9 @@ function newProductViaAPI(r) {
         distributormusic: [r.distributor].filter(Boolean),
         musicartist: [r.artist1, r.artist2, r.artist3, r.artist4].filter(Boolean),
         musicstyle: [r.genre1, r.genre2, r.genre3, r.genre4, r.genre5].filter(Boolean)
-      });
+      }, 'yoyaku');
     } catch (e) {
-      Logger.log('Custom taxonomies skipped: ' + e.message);
+      Logger.log('[YOYAKU] Custom taxonomies skipped: ' + e.message);
     }
 
     return {
@@ -689,7 +757,7 @@ function newProductViaAPI(r) {
     };
 
   } catch (err) {
-    Logger.log('Error creating product: ' + err);
+    Logger.log('[YOYAKU] Error creating product: ' + err);
     return {
       success: false,
       error: String(err.message || err)
@@ -698,16 +766,80 @@ function newProductViaAPI(r) {
 }
 
 // ============================================================================
-// PAYLOAD BUILDER (WP ALL IMPORT #852 COMPLIANCE)
+// MAIN API LOGIC - YYD.FR
 // ============================================================================
 
-function buildWooPayloadFromRow_(r, categoryId, tagIds) {
+function newProductYYD(r) {
+  try {
+    // Validate
+    const validation = validateProduct(r, 'yyd');
+    if (!validation.valid) {
+      throw new Error('Validation failed: ' + validation.errors.join(', '));
+    }
+
+    // YYD uses label as category (not "Forthcoming")
+    const categoryId = ensureCategoryIdByName_(r.label || 'Uncategorized', 'yyd');
+
+    // Ensure tags exist
+    const tagIds = ensureTagIds_([r.tag1, r.tag2].filter(Boolean), 'yyd');
+
+    // Build WooCommerce payload for YYD.FR
+    const payload = buildWooPayloadYYD_(r, categoryId, tagIds);
+
+    // Find existing product by SKU
+    const existing = wooGet_('/products', { sku: r.sku }, 'yyd');
+
+    let product;
+    if (Array.isArray(existing) && existing.length > 0) {
+      // Update existing
+      product = wooPut_('/products/' + existing[0].id, payload, 'yyd');
+      Logger.log('[YYD] Updated product: ' + product.id);
+    } else {
+      // Create new
+      product = wooPost_('/products', payload, 'yyd');
+      Logger.log('[YYD] Created product: ' + product.id);
+    }
+
+    // Optional: Assign custom taxonomies via /wp/v2
+    try {
+      assignCustomTaxonomies_(product.id, {
+        musicformat: [r.format].filter(Boolean),
+        ownermusic: [r.distributor].filter(Boolean),
+        musicartist: [r.artist1, r.artist2, r.artist3, r.artist4].filter(Boolean),
+        musicstyle: [r.genre1, r.genre2, r.genre3, r.genre4, r.genre5].filter(Boolean)
+      }, 'yyd');
+    } catch (e) {
+      Logger.log('[YYD] Custom taxonomies skipped: ' + e.message);
+    }
+
+    return {
+      success: true,
+      id: product.id,
+      sku: r.sku,
+      url: product.permalink,
+      imagesCount: payload.images ? payload.images.length : 0
+    };
+
+  } catch (err) {
+    Logger.log('[YYD] Error creating product: ' + err);
+    return {
+      success: false,
+      error: String(err.message || err)
+    };
+  }
+}
+
+// ============================================================================
+// PAYLOAD BUILDER - YOYAKU.IO (Import #852)
+// ============================================================================
+
+function buildWooPayloadYoyaku_(r, categoryId, tagIds) {
   // Smart image detection (multi-format, skip missing)
   const images = testAndCollectImages_(r.sku);
 
   // Meta data (exact WP All Import #852 mapping)
   const meta = [
-    { key: '_wc_cog_cost', value: String(r.pricenet || '') },
+    { key: '_wc_cog_cost', value: String(r.pricenet || r['price net'] || '') },
     { key: '_coming_soon_label', value: String(r.release_date || '') },
     { key: '_music_formats', value: String(r.format || '') },
     { key: '_ph_ups_manufacture_country', value: 'FR' },
@@ -716,22 +848,22 @@ function buildWooPayloadFromRow_(r, categoryId, tagIds) {
     { key: '_product_features', value: String(r.feature || '') },
     { key: '_set_coming_soon', value: 'yes' },
     { key: '_yoyaku_playlist_files_raw', value: String(r.playlist_files || '') },
-    { key: '_depot_vente', value: String(r.depotvente || 'no') },
+    { key: '_depot_vente', value: String(r['depot vente'] || r.depotvente || 'no') },
     { key: 'hscode_custom_field', value: '8523801000' },
     { key: '_product_origin_country', value: 'FR' },
-    { key: '_wp_old_slug', value: String(r.sku) },
+    { key: '_wp_old_slug', value: String(r._wp_old_slug || r.sku) },
     { key: '_product_qr_code', value: 'https://www.yoyaku.io/release/' + String(r.sku) },
     { key: '_ph_ups_hst_var', value: '8523801000' }
   ];
 
-  // Build payload
+  // Build payload for YOYAKU.IO (B2C)
   return {
     name: String(r.title),
     slug: String(r.slug),
     type: 'simple',
     status: 'publish',
-    sku: String(r.sku),
-    regular_price: String(r.priceyoyakuio),
+    sku: String(r.sku || r.SKU),
+    regular_price: String(r.priceyoyakuio || r['price yoyaku,io'] || r['price yoyaku.io']),
     short_description: String(r.description || ''),
     manage_stock: true,
     stock_status: 'outofstock',
@@ -741,7 +873,62 @@ function buildWooPayloadFromRow_(r, categoryId, tagIds) {
     downloadable: false,
     tax_status: 'taxable',
     tax_class: '',
-    weight: String(r.weight || ''),
+    weight: String(r.weight || '0.2'),
+    dimensions: {
+      length: '30',
+      width: '30',
+      height: '0.2'
+    },
+    categories: [{ id: categoryId }],
+    tags: tagIds.map(id => ({ id: id })),
+    images: images,
+    meta_data: meta
+  };
+}
+
+// ============================================================================
+// PAYLOAD BUILDER - YYD.FR (Import #935)
+// ============================================================================
+
+function buildWooPayloadYYD_(r, categoryId, tagIds) {
+  // Smart image detection (multi-format, skip missing)
+  // NOTE: YYD import 935 uses _600 suffix pattern!
+  const images = testAndCollectImages_(r.sku);
+
+  // Meta data (exact WP All Import #935 mapping)
+  const meta = [
+    { key: '_low_stock_amount', value: '10' },
+    { key: '_product_features', value: String(r.feature || '') },
+    { key: '_is_pre_order', value: 'yes' }, // ALL PRODUCTS PRE-ORDER on YYD
+    { key: '_yyd_playlist_files_raw', value: String(r.playlist_files || '') },
+    { key: '_pre_order_date', value: String(r.release_date || '') },
+    { key: '_pre_order_stock_status', value: 'global' },
+    { key: '_date_out', value: String(r.release_date || '') },
+    { key: 'hscode_custom_field', value: '85238010' },
+    { key: '_product_origin_country', value: 'FR' },
+    { key: 'ph_ups_invoice_desc', value: 'Vinyl record or Phonograph record' }
+  ];
+
+  // Build payload for YYD.FR (B2B)
+  return {
+    name: String(r.title),
+    slug: String(r.sku || r.SKU).toLowerCase(), // YYD uses SKU as slug
+    type: 'simple',
+    status: 'publish',
+    sku: String(r.sku || r.SKU),
+    regular_price: String(r['price yydistribution'] || r.priceyydistribution || r['price yoyaku,io']),
+    description: String(r.description || ''),
+    short_description: '',
+    manage_stock: true,
+    stock_quantity: 0, // Always starts at 0
+    stock_status: 'outofstock',
+    backorders: 'yes', // Allow pre-orders
+    sold_individually: false,
+    virtual: false,
+    downloadable: false,
+    tax_status: 'taxable',
+    tax_class: '',
+    weight: String(r.weight || '0.2'),
     dimensions: {
       length: '30',
       width: '30',
@@ -810,20 +997,31 @@ function testAndCollectImages_(sku) {
 }
 
 // ============================================================================
-// WOOCOMMERCE REST API HELPERS
+// WOOCOMMERCE REST API HELPERS (Multi-Site Support)
 // ============================================================================
 
-function wcBase_() {
-  const base = PropertiesService.getScriptProperties().getProperty('WC_BASE_URL') || '';
+function wcBase_(site) {
+  site = site || 'yoyaku';
+  const propKey = site === 'yyd' ? 'WC_BASE_URL_YYD' : 'WC_BASE_URL';
+  const base = PropertiesService.getScriptProperties().getProperty(propKey) || '';
+
+  if (!base) {
+    throw new Error('WooCommerce base URL missing for ' + site + '. Set ' + propKey + ' in Script Properties.');
+  }
+
   return base.replace(/\/$/, '') + '/wc/v3';
 }
 
-function wcHeaders_() {
-  const key = PropertiesService.getScriptProperties().getProperty('WC_CONSUMER_KEY');
-  const sec = PropertiesService.getScriptProperties().getProperty('WC_CONSUMER_SECRET');
+function wcHeaders_(site) {
+  site = site || 'yoyaku';
+  const keyProp = site === 'yyd' ? 'WC_CONSUMER_KEY_YYD' : 'WC_CONSUMER_KEY';
+  const secProp = site === 'yyd' ? 'WC_CONSUMER_SECRET_YYD' : 'WC_CONSUMER_SECRET';
+
+  const key = PropertiesService.getScriptProperties().getProperty(keyProp);
+  const sec = PropertiesService.getScriptProperties().getProperty(secProp);
 
   if (!key || !sec) {
-    throw new Error('WooCommerce credentials missing. Set WC_CONSUMER_KEY and WC_CONSUMER_SECRET in Script Properties.');
+    throw new Error('WooCommerce credentials missing for ' + site + '. Set ' + keyProp + ' and ' + secProp + ' in Script Properties.');
   }
 
   const token = Utilities.base64Encode(key + ':' + sec);
@@ -833,8 +1031,9 @@ function wcHeaders_() {
   };
 }
 
-function wooGet_(path, params) {
-  let url = wcBase_() + (path.startsWith('/') ? path : '/' + path);
+function wooGet_(path, params, site) {
+  site = site || 'yoyaku';
+  let url = wcBase_(site) + (path.startsWith('/') ? path : '/' + path);
 
   if (params && Object.keys(params).length > 0) {
     const qs = Object.keys(params)
@@ -845,7 +1044,7 @@ function wooGet_(path, params) {
 
   const res = UrlFetchApp.fetch(url, {
     method: 'get',
-    headers: wcHeaders_(),
+    headers: wcHeaders_(site),
     muteHttpExceptions: true
   });
 
@@ -853,15 +1052,16 @@ function wooGet_(path, params) {
     return JSON.parse(res.getContentText());
   }
 
-  throw new Error('WooCommerce GET ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
+  throw new Error('[' + site.toUpperCase() + '] WooCommerce GET ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
 }
 
-function wooPost_(path, body) {
-  const url = wcBase_() + (path.startsWith('/') ? path : '/' + path);
+function wooPost_(path, body, site) {
+  site = site || 'yoyaku';
+  const url = wcBase_(site) + (path.startsWith('/') ? path : '/' + path);
 
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
-    headers: wcHeaders_(),
+    headers: wcHeaders_(site),
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   });
@@ -870,15 +1070,16 @@ function wooPost_(path, body) {
     return JSON.parse(res.getContentText());
   }
 
-  throw new Error('WooCommerce POST ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
+  throw new Error('[' + site.toUpperCase() + '] WooCommerce POST ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
 }
 
-function wooPut_(path, body) {
-  const url = wcBase_() + (path.startsWith('/') ? path : '/' + path);
+function wooPut_(path, body, site) {
+  site = site || 'yoyaku';
+  const url = wcBase_(site) + (path.startsWith('/') ? path : '/' + path);
 
   const res = UrlFetchApp.fetch(url, {
     method: 'put',
-    headers: wcHeaders_(),
+    headers: wcHeaders_(site),
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   });
@@ -887,40 +1088,42 @@ function wooPut_(path, body) {
     return JSON.parse(res.getContentText());
   }
 
-  throw new Error('WooCommerce PUT ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
+  throw new Error('[' + site.toUpperCase() + '] WooCommerce PUT ' + path + ' failed: HTTP ' + res.getResponseCode() + ' - ' + res.getContentText());
 }
 
 // ============================================================================
 // CATEGORY & TAGS (AUTO-CREATE IF MISSING)
 // ============================================================================
 
-function ensureCategoryIdByName_(name) {
-  const list = wooGet_('/products/categories', { per_page: 100, search: name });
+function ensureCategoryIdByName_(name, site) {
+  site = site || 'yoyaku';
+  const list = wooGet_('/products/categories', { per_page: 100, search: name }, site);
   const found = (Array.isArray(list) ? list : [])
     .find(c => c.name.toLowerCase() === String(name).toLowerCase());
 
   if (found) {
-    Logger.log('Category "' + name + '" found: ID ' + found.id);
+    Logger.log('[' + site.toUpperCase() + '] Category "' + name + '" found: ID ' + found.id);
     return found.id;
   }
 
-  const created = wooPost_('/products/categories', { name: name });
-  Logger.log('Category "' + name + '" created: ID ' + created.id);
+  const created = wooPost_('/products/categories', { name: name }, site);
+  Logger.log('[' + site.toUpperCase() + '] Category "' + name + '" created: ID ' + created.id);
   return created.id;
 }
 
-function ensureTagIds_(names) {
+function ensureTagIds_(names, site) {
+  site = site || 'yoyaku';
   const ids = [];
 
   names.forEach(name => {
-    const list = wooGet_('/products/tags', { per_page: 100, search: name });
+    const list = wooGet_('/products/tags', { per_page: 100, search: name }, site);
     const found = (Array.isArray(list) ? list : [])
       .find(t => t.name.toLowerCase() === String(name).toLowerCase());
 
     if (found) {
       ids.push(found.id);
     } else {
-      const created = wooPost_('/products/tags', { name: name });
+      const created = wooPost_('/products/tags', { name: name }, site);
       ids.push(created.id);
     }
   });
@@ -932,17 +1135,23 @@ function ensureTagIds_(names) {
 // CUSTOM TAXONOMIES (OPTIONAL - VIA /wp/v2)
 // ============================================================================
 
-function wpBase_() {
-  const base = PropertiesService.getScriptProperties().getProperty('WC_BASE_URL') || '';
+function wpBase_(site) {
+  site = site || 'yoyaku';
+  const propKey = site === 'yyd' ? 'WC_BASE_URL_YYD' : 'WC_BASE_URL';
+  const base = PropertiesService.getScriptProperties().getProperty(propKey) || '';
   return base.replace(/\/$/, '').replace(/\/wc\/v3$/, '') + '/wp/v2';
 }
 
-function wpHeaders_() {
-  const u = PropertiesService.getScriptProperties().getProperty('WP_APP_USER');
-  const p = PropertiesService.getScriptProperties().getProperty('WP_APP_PASSWORD');
+function wpHeaders_(site) {
+  site = site || 'yoyaku';
+  const userProp = site === 'yyd' ? 'WP_APP_USER_YYD' : 'WP_APP_USER';
+  const passProp = site === 'yyd' ? 'WP_APP_PASSWORD_YYD' : 'WP_APP_PASSWORD';
+
+  const u = PropertiesService.getScriptProperties().getProperty(userProp);
+  const p = PropertiesService.getScriptProperties().getProperty(passProp);
 
   if (!u || !p) {
-    throw new Error('WordPress REST credentials missing. Set WP_APP_USER and WP_APP_PASSWORD in Script Properties.');
+    throw new Error('[' + site.toUpperCase() + '] WordPress REST credentials missing. Set ' + userProp + ' and ' + passProp + ' in Script Properties.');
   }
 
   const token = Utilities.base64Encode(u + ':' + p);
@@ -952,15 +1161,16 @@ function wpHeaders_() {
   };
 }
 
-function ensureTerms_(taxonomy, names) {
+function ensureTerms_(taxonomy, names, site) {
+  site = site || 'yoyaku';
   const ids = [];
 
   names.forEach(name => {
-    const url = wpBase_() + '/' + taxonomy + '?per_page=100&search=' + encodeURIComponent(name);
+    const url = wpBase_(site) + '/' + taxonomy + '?per_page=100&search=' + encodeURIComponent(name);
 
     const res = UrlFetchApp.fetch(url, {
       method: 'get',
-      headers: wpHeaders_(),
+      headers: wpHeaders_(site),
       muteHttpExceptions: true
     });
 
@@ -972,9 +1182,9 @@ function ensureTerms_(taxonomy, names) {
         ids.push(found.id);
       } else {
         // Create term
-        const createRes = UrlFetchApp.fetch(wpBase_() + '/' + taxonomy, {
+        const createRes = UrlFetchApp.fetch(wpBase_(site) + '/' + taxonomy, {
           method: 'post',
-          headers: wpHeaders_(),
+          headers: wpHeaders_(site),
           payload: JSON.stringify({ name: name }),
           muteHttpExceptions: true
         });
@@ -989,12 +1199,17 @@ function ensureTerms_(taxonomy, names) {
   return ids;
 }
 
-function assignCustomTaxonomies_(productId, map) {
-  const u = PropertiesService.getScriptProperties().getProperty('WP_APP_USER');
-  const p = PropertiesService.getScriptProperties().getProperty('WP_APP_PASSWORD');
+function assignCustomTaxonomies_(productId, map, site) {
+  site = site || 'yoyaku';
+
+  const userProp = site === 'yyd' ? 'WP_APP_USER_YYD' : 'WP_APP_USER';
+  const passProp = site === 'yyd' ? 'WP_APP_PASSWORD_YYD' : 'WP_APP_PASSWORD';
+
+  const u = PropertiesService.getScriptProperties().getProperty(userProp);
+  const p = PropertiesService.getScriptProperties().getProperty(passProp);
 
   if (!u || !p) {
-    throw new Error('WordPress REST credentials not configured');
+    throw new Error('[' + site.toUpperCase() + '] WordPress REST credentials not configured');
   }
 
   const body = {};
@@ -1002,7 +1217,7 @@ function assignCustomTaxonomies_(productId, map) {
   Object.keys(map).forEach(tax => {
     const names = map[tax].filter(Boolean);
     if (names.length > 0) {
-      body[tax] = ensureTerms_(tax, names);
+      body[tax] = ensureTerms_(tax, names, site);
     }
   });
 
@@ -1010,18 +1225,18 @@ function assignCustomTaxonomies_(productId, map) {
     return; // Nothing to assign
   }
 
-  const url = wpBase_() + '/product/' + productId;
+  const url = wpBase_(site) + '/product/' + productId;
 
   const resp = UrlFetchApp.fetch(url, {
     method: 'post',
-    headers: wpHeaders_(),
+    headers: wpHeaders_(site),
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   });
 
   if (resp.getResponseCode() < 200 || resp.getResponseCode() >= 300) {
-    throw new Error('Assigning custom taxonomies failed: HTTP ' + resp.getResponseCode() + ' - ' + resp.getContentText());
+    throw new Error('[' + site.toUpperCase() + '] Assigning custom taxonomies failed: HTTP ' + resp.getResponseCode() + ' - ' + resp.getContentText());
   }
 
-  Logger.log('Custom taxonomies assigned to product ' + productId);
+  Logger.log('[' + site.toUpperCase() + '] Custom taxonomies assigned to product ' + productId);
 }

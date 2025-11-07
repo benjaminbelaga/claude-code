@@ -19,6 +19,7 @@ This is a **standalone Google Apps Script** version of the YOYAKU product creati
 - ✅ **WP All Import #852 Compliant** (100% field compatibility)
 - 🚀 **Single or Bulk Import** (select rows or process all)
 - 🆕 **Auto-Generate Missing Columns** (replace formulas with one click!)
+- 🌐 **Dual-Site Support** (YOYAKU.IO B2C + YYD.FR B2B)
 
 ### Difference from Main Import Dashboard
 
@@ -207,6 +208,16 @@ WP_APP_PASSWORD = xxxx xxxx xxxx xxxx xxxx xxxx
 ---
 
 ## 📝 Changelog
+
+**v1.1.0 (2025-11-07) - Dual-Site Support + Auto-Generation**
+- Dual-site support (YOYAKU.IO B2C + YYD.FR B2B)
+- Auto-generate missing columns (replace formulas with one-click automation)
+- Separate menu items for each site
+- WP All Import #935 (YYD.FR) compliance
+- Multi-site API helpers (categories, tags, taxonomies)
+- Distributor margin calculations (8 distributors)
+- Smart playlist generation from tracklist or individual tracks
+- Image/MP3 server validation with HTTP HEAD
 
 **v1.0.0 (2025-11-07) - Standalone Version**
 - Google Apps Script standalone implementation
