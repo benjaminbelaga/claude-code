@@ -1,19 +1,22 @@
 /**
- * YOYAKU - New Product via WooCommerce REST API
+ * YOYAKU - New Product via Custom API Endpoint v2
  * Google Apps Script version
  *
- * Conforme à la configuration WP All Import #852
+ * Conforme à la configuration WP All Import #852 (YOYAKU.IO) et #935 (YYD.FR)
  *
  * Features:
- * - Smart image detection (webp, jpg, jpeg, png)
- * - Skip missing images (no 404 errors)
- * - Multiple image variants (no suffix, _1, _2, etc.)
- * - Idempotent (find-or-create by SKU)
- * - Full WP All Import #852 mapping compliance
- * - Optional custom taxonomies via /wp/v2
+ * - 🚀 ULTRA-FAST: Custom endpoint v2 (10-20x faster than WooCommerce API)
+ * - 🔐 Secure: Bearer token authentication
+ * - 🌐 Dual-Site: YOYAKU.IO (B2C) + YYD.FR (B2B)
+ * - ✨ Smart image detection (webp, jpg, jpeg, png)
+ * - 🖼️ Skip missing images (no 404 errors)
+ * - 🔄 Multiple image variants (no suffix, _1, _2, etc.)
+ * - ✅ Idempotent (find-or-create by SKU)
+ * - 📊 Full WP All Import #852/#935 mapping compliance
+ * - 🆕 Auto-generate missing columns (replace formulas!)
  *
  * Author: Benjamin Belaga
- * Version: 1.0.0
+ * Version: 2.0.0
  * Date: 2025-11-07
  */
 
@@ -70,17 +73,18 @@ function menuCreateYoyaku() {
     return;
   }
 
-  // Create/Update on YOYAKU.IO
-  SpreadsheetApp.getUi().alert('⏳ Processing product on YOYAKU.IO...\n\nSKU: ' + record.sku);
+  // Create/Update on YOYAKU.IO using custom endpoint v2
+  SpreadsheetApp.getUi().alert('⏳ Processing product on YOYAKU.IO (API v2)...\n\nSKU: ' + record.sku);
 
-  const res = newProductYoyaku(record);
+  const res = newProductV2_(record, 'yoyaku');
 
   if (res.success) {
     SpreadsheetApp.getUi().alert(
       '✅ Success on YOYAKU.IO!\n\n' +
+      'Action: ' + (res.action || 'N/A') + '\n' +
       'Product: ' + res.sku + '\n' +
       'ID: ' + res.id + '\n' +
-      'Images found: ' + (res.imagesCount || 0) + '\n' +
+      'Execution time: ' + (res.executionTimeMs || 0) + 'ms\n' +
       'URL: ' + (res.url || 'N/A')
     );
   } else {
@@ -112,17 +116,18 @@ function menuCreateYYD() {
     return;
   }
 
-  // Create/Update on YYD.FR
-  SpreadsheetApp.getUi().alert('⏳ Processing product on YYD.FR...\n\nSKU: ' + record.sku);
+  // Create/Update on YYD.FR using custom endpoint v2
+  SpreadsheetApp.getUi().alert('⏳ Processing product on YYD.FR (API v2)...\n\nSKU: ' + record.sku);
 
-  const res = newProductYYD(record);
+  const res = newProductV2_(record, 'yyd');
 
   if (res.success) {
     SpreadsheetApp.getUi().alert(
       '✅ Success on YYD.FR!\n\n' +
+      'Action: ' + (res.action || 'N/A') + '\n' +
       'Product: ' + res.sku + '\n' +
       'ID: ' + res.id + '\n' +
-      'Images found: ' + (res.imagesCount || 0) + '\n' +
+      'Execution time: ' + (res.executionTimeMs || 0) + 'ms\n' +
       'URL: ' + (res.url || 'N/A')
     );
   } else {
@@ -702,7 +707,156 @@ function validateProduct(r, site) {
 }
 
 // ============================================================================
-// MAIN API LOGIC - YOYAKU.IO
+// MAIN API LOGIC - CUSTOM ENDPOINT v2 (ULTRA-FAST)
+// ============================================================================
+
+/**
+ * Create product using YOYAKU API Connector v2 endpoint (RECOMMENDED)
+ * 10-20x faster than WooCommerce API
+ * Uses Bearer token authentication
+ *
+ * @param {object} r Row data
+ * @param {string} site Site identifier ('yoyaku' or 'yyd')
+ * @return {object} Result object
+ */
+function newProductV2_(r, site) {
+  site = site || 'yoyaku';
+
+  try {
+    // Validate
+    const validation = validateProduct(r, site);
+    if (!validation.valid) {
+      throw new Error('Validation failed: ' + validation.errors.join(', '));
+    }
+
+    // Build API payload
+    const payload = buildApiPayloadV2_(r, site);
+
+    // Get endpoint and token
+    const baseUrlProp = site === 'yyd' ? 'WC_BASE_URL_YYD' : 'WC_BASE_URL';
+    const tokenProp = site === 'yyd' ? 'YOYAKU_API_BEARER_TOKEN_YYD' : 'YOYAKU_API_BEARER_TOKEN';
+
+    const baseUrl = PropertiesService.getScriptProperties().getProperty(baseUrlProp);
+    const token = PropertiesService.getScriptProperties().getProperty(tokenProp);
+
+    if (!token) {
+      throw new Error('[' + site.toUpperCase() + '] Missing Bearer token. Set ' + tokenProp + ' in Script Properties');
+    }
+
+    // Call custom endpoint
+    const endpoint = baseUrl.replace(/\/wp-json.*/, '') + '/wp-json/yoyaku/v2/product/create';
+
+    const response = UrlFetchApp.fetch(endpoint, {
+      method: 'post',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+
+    const statusCode = response.getResponseCode();
+    const responseData = JSON.parse(response.getContentText());
+
+    if (statusCode >= 200 && statusCode < 300 && responseData.success) {
+      Logger.log('[' + site.toUpperCase() + ' V2] ' + responseData.action + ' product: ' + responseData.product_id + ' (SKU: ' + r.sku + ') in ' + responseData.execution_time_ms + 'ms');
+
+      return {
+        success: true,
+        action: responseData.action,
+        id: responseData.product_id,
+        sku: r.sku,
+        url: responseData.url,
+        executionTimeMs: responseData.execution_time_ms
+      };
+    } else {
+      throw new Error(responseData.error || 'API returned error: ' + response.getContentText());
+    }
+
+  } catch (err) {
+    Logger.log('[' + site.toUpperCase() + ' V2] Error: ' + err);
+    return {
+      success: false,
+      error: String(err.message || err)
+    };
+  }
+}
+
+/**
+ * Build payload for YOYAKU API Connector v2
+ *
+ * @param {object} r Row data
+ * @param {string} site Site identifier
+ * @return {object} API payload
+ */
+function buildApiPayloadV2_(r, site) {
+  // Detect images
+  const imageUrls = detectAllImages_(r.sku);
+
+  // Build base payload
+  const payload = {
+    site: site,
+    sku: String(r.sku).toUpperCase(),
+    title: String(r.title),
+    slug: site === 'yyd' ? String(r.sku).toLowerCase() : String(r.slug || ''),
+    description: String(r.description || ''),
+    price: site === 'yoyaku' ? parseFloat(r.priceyoyakuio || r['price yoyaku.io'] || 0) : parseFloat(r['price yydistribution'] || 0),
+    weight: parseFloat(r.weight || 0.2),
+    stock_quantity: 0,
+    stock_status: 'outofstock',
+    category: site === 'yoyaku' ? 'Forthcoming' : String(r.label || 'Uncategorized'),
+    images: imageUrls,
+    artists: [r.artist1, r.artist2, r.artist3, r.artist4].filter(Boolean),
+    label: String(r.label || ''),
+    genres: [r.genre1, r.genre2, r.genre3, r.genre4, r.genre5].filter(Boolean),
+    distributor: String(r.distributor || ''),
+    tags: [r.tag1, r.tag2].filter(Boolean)
+  };
+
+  // Add format for YYD
+  if (site === 'yyd' && r.format) {
+    payload.format = String(r.format);
+  }
+
+  // Build meta_data
+  const meta = {};
+
+  // Playlist files
+  if (r.playlist_files || r.tracklist) {
+    const playlistRaw = r.playlist_files || generatePlaylistFromTracklist_(r.tracklist, r);
+    meta['_yoyaku_playlist_files_raw'] = playlistRaw;
+    meta['_yyplayer_mp3_url'] = 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/mp3/' + r.sku + '_1.mp3';
+  }
+
+  // Dimensions (hardcoded per WP All Import #852)
+  meta['_width'] = '30';
+  meta['_height'] = '30';
+  meta['_length'] = '0.2';
+
+  // Site-specific meta
+  if (site === 'yoyaku') {
+    meta['_set_coming_soon'] = 'yes';
+    meta['_yyo_qr_code'] = r.sku;
+    meta['_depot_vente'] = String(r.depot_vente || 'no');
+  } else {
+    meta['_is_pre_order'] = 'yes';
+    meta['_low_stock_amount'] = '10';
+  }
+
+  // UPS meta
+  if (r.UPS_Numero_de_suivi) {
+    meta['_ups_tracking_number'] = String(r.UPS_Numero_de_suivi);
+  }
+
+  // Add meta to payload
+  payload.meta_data = meta;
+
+  return payload;
+}
+
+// ============================================================================
+// MAIN API LOGIC - YOYAKU.IO (WooCommerce API - Legacy)
 // ============================================================================
 
 function newProductYoyaku(r) {

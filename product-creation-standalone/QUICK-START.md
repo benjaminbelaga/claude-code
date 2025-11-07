@@ -58,6 +58,13 @@ TEST001 | Test Artist - Test Album | test-artist-test-album | DEEJAY | Test Reco
 | `WC_CONSUMER_KEY_YYD` | `ck_...` (get from WordPress) |
 | `WC_CONSUMER_SECRET_YYD` | `cs_...` (get from WordPress) |
 
+**API v2 Bearer Tokens (REQUIRED for custom endpoint - 10-20x faster):**
+
+| Property | Value |
+|----------|-------|
+| `YOYAKU_API_BEARER_TOKEN` | Secure token for YOYAKU.IO (from wp-config.php) |
+| `YOYAKU_API_BEARER_TOKEN_YYD` | Secure token for YYD.FR (from wp-config.php) |
+
 **Custom Taxonomies (Optional - for both sites):**
 
 | Property | Value |
@@ -71,6 +78,13 @@ TEST001 | Test Artist - Test Album | test-artist-test-album | DEEJAY | Test Reco
 ```
 WordPress Admin → WooCommerce → Settings → Advanced → REST API
 → Add Key → Copy keys
+```
+
+**Get Bearer Tokens (from wp-config.php):**
+```bash
+# On server
+ssh yoyaku-cloudways
+grep YOYAKU_API_BEARER_TOKEN applications/jfnkmjmfer/public_html/wp-config.php
 ```
 
 **Get WordPress Application Password:**
