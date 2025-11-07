@@ -64,25 +64,25 @@ class YOYAKU_Product_Creation_Endpoint extends YOYAKU_Base_Endpoint {
             'sku' => array(
                 'required' => true,
                 'type' => 'string',
-                'sanitize_callback' => 'strtoupper',
+                'sanitize_callback' => function($value) { return strtoupper($value); },
                 'description' => 'Product SKU (unique identifier)'
             ),
             'title' => array(
                 'required' => true,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
+                'sanitize_callback' => function($value) { return sanitize_text_field($value); },
                 'description' => 'Product title'
             ),
             'slug' => array(
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_title',
+                'sanitize_callback' => function($value) { return sanitize_title($value); },
                 'description' => 'Product slug (auto-generated if empty)'
             ),
             'description' => array(
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'wp_kses_post',
+                'sanitize_callback' => function($value) { return wp_kses_post($value); },
                 'description' => 'Product description'
             ),
             'price' => array(
