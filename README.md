@@ -14,6 +14,7 @@
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [NEW: Standalone Product Creation](#new-standalone-product-creation)
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
@@ -24,6 +25,35 @@
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 - [Changelog](#changelog)
+
+---
+
+## 🆕 NEW: Standalone Product Creation
+
+**Added:** 2025-11-07 | **Version:** 1.0.0 Standalone
+
+### Create NEW products with smart multi-format image detection
+
+A simplified Google Apps Script implementation for creating products from scratch (complementary to the stock management system).
+
+**🌟 Key Innovation:**
+- **Smart Multi-Format Images**: Tests webp, jpg, jpeg, png (4 formats)
+- **Multi-Variant Detection**: No suffix, _1, _2, ..., _10 (11 variants)
+- **Graceful Skip**: HTTP HEAD checks, skips missing (no 404 errors)
+- **Zero Setup**: Copy-paste script, configure API keys, done!
+
+**📂 Location:** [`/product-creation-standalone/`](product-creation-standalone/)
+
+**📖 Documentation:**
+- [Quick Start (5 min)](product-creation-standalone/QUICK-START.md)
+- [Complete Guide](product-creation-standalone/README.md)
+- [Google Apps Script](product-creation-standalone/scripts/google-apps-script-new-product.js)
+
+**🎯 Use Case:**
+- Creating brand new products from Google Sheets
+- 100% WP All Import #852 compliant
+- Webmaster-friendly (zero technical setup)
+- 100x faster than WP All Import manual runs
 
 ---
 
