@@ -5,7 +5,15 @@
  * Supports both YOYAKU.IO (B2C) and YYD.FR (B2B) with different configurations
  *
  * @package YOYAKU_API_Connector
- * @version 2.2.0
+ * @version 2.3.0
+ * @changelog 2.3.0 - Complete B2B compliance with WP All Import #935
+ *            - Added slug=SKU for YYD (instead of formatted slug)
+ *            - Added release_date, playlist_files, features parameters
+ *            - Added _pre_order_stock_status, _pre_order_date, _date_out
+ *            - Added shipping class 1231 for YYD
+ *            - Added all UPS customs fields (HS codes, origin, invoice)
+ *            - Added playlist files handling (_yyd_playlist_files_raw/_yoyaku_playlist_files_raw)
+ *            - Added product features support (_product_features)
  */
 
 defined('ABSPATH') || exit;
@@ -149,6 +157,22 @@ class YOYAKU_Product_Creation_Endpoint extends YOYAKU_Base_Endpoint {
                 'type' => 'string',
                 'description' => 'Format (musicformat taxonomy for YYD only)'
             ),
+            'release_date' => array(
+                'required' => false,
+                'type' => 'string',
+                'description' => 'Release date (used for _pre_order_date, _date_out, _coming_soon_label)'
+            ),
+            'playlist_files' => array(
+                'required' => false,
+                'type' => 'string',
+                'description' => 'Playlist files (used for _yoyaku_playlist_files_raw or _yyd_playlist_files_raw)'
+            ),
+            'features' => array(
+                'required' => false,
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'description' => 'Product features (_product_features meta field)'
+            ),
             'meta_data' => array(
                 'required' => false,
                 'type' => 'object',
@@ -283,13 +307,21 @@ class YOYAKU_Product_Creation_Endpoint extends YOYAKU_Base_Endpoint {
 
         $sku = strtoupper($request['sku']);
         $title = sanitize_text_field($request['title']);
-        $slug = !empty($request['slug']) ? sanitize_title($request['slug']) : sanitize_title($title . '-' . $sku);
+        $site = $request['site'];
+
+        // YYD B2B: slug = SKU (matching WP All Import #935)
+        // YOYAKU B2C: slug = formatted slug or title-sku
+        if ($site === 'yyd') {
+            $slug = strtolower($sku);
+        } else {
+            $slug = !empty($request['slug']) ? sanitize_title($request['slug']) : sanitize_title($title . '-' . $sku);
+        }
+
         $description = !empty($request['description']) ? wp_kses_post($request['description']) : '';
         $price = floatval($request['price']);
         $weight = !empty($request['weight']) ? floatval($request['weight']) : 0.2;
         $stock_qty = !empty($request['stock_quantity']) ? intval($request['stock_quantity']) : 0;
         $stock_status = !empty($request['stock_status']) ? $request['stock_status'] : 'outofstock';
-        $site = $request['site'];
 
         // Insert post
         $post_data = array(
@@ -329,14 +361,61 @@ class YOYAKU_Product_Creation_Endpoint extends YOYAKU_Base_Endpoint {
 
         // Add site-specific meta
         if ($site === 'yyd') {
+            // B2B-specific meta fields (matching WP All Import #935)
             $meta_data['_is_pre_order'] = 'yes';
             $meta_data['_low_stock_amount'] = '10';
+            $meta_data['_pre_order_stock_status'] = 'global';
+
+            // Release date fields
+            if (!empty($request['release_date'])) {
+                $meta_data['_pre_order_date'] = sanitize_text_field($request['release_date']);
+                $meta_data['_date_out'] = sanitize_text_field($request['release_date']);
+            }
+
+            // Playlist files
+            if (!empty($request['playlist_files'])) {
+                $meta_data['_yyd_playlist_files_raw'] = sanitize_text_field($request['playlist_files']);
+            }
+
+            // Product features
+            if (!empty($request['features'])) {
+                $meta_data['_product_features'] = sanitize_text_field($request['features']);
+            }
+
+            // UPS customs fields (hardcoded for vinyl records)
+            $meta_data['hscode_custom_field'] = '8523801000';
+            $meta_data['_product_origin_country'] = 'FR';
+            $meta_data['ph_ups_invoice_desc'] = 'Phonograph records (vinyl), non-blank';
+            $meta_data['_ph_ups_hst_var'] = '8523801000';
+            $meta_data['_wf_ups_hst'] = '8523801000';
+
         } else {
+            // B2C-specific meta fields (YOYAKU.IO)
             $meta_data['_set_coming_soon'] = 'yes';
+
+            // Release date field
+            if (!empty($request['release_date'])) {
+                $meta_data['_coming_soon_label'] = sanitize_text_field($request['release_date']);
+            }
+
+            // Playlist files
+            if (!empty($request['playlist_files'])) {
+                $meta_data['_yoyaku_playlist_files_raw'] = sanitize_text_field($request['playlist_files']);
+            }
+
+            // Product features
+            if (!empty($request['features'])) {
+                $meta_data['_product_features'] = sanitize_text_field($request['features']);
+            }
         }
 
         foreach ($meta_data as $key => $value) {
             update_post_meta($product_id, $key, $value);
+        }
+
+        // Set shipping class for YYD (ID 1231)
+        if ($site === 'yyd') {
+            wp_set_object_terms($product_id, 1231, 'product_shipping_class');
         }
 
         return $product_id;
