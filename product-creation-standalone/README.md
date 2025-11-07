@@ -59,7 +59,7 @@ This is a **standalone Google Apps Script** version of the YOYAKU product creati
 
 ## 🖼️ Smart Image Detection
 
-**Problem:** WP All Import tries 10 JPG images (`SKU_1_600.jpg` ... `SKU_10_600.jpg`) but fails on 404s.
+**Problem:** WP All Import tries 10 JPG images (`SKU_1.jpg` ... `SKU_10.jpg`) but fails on 404s.
 
 **Solution:** Test ALL formats and variants, skip missing gracefully.
 
@@ -68,10 +68,10 @@ This is a **standalone Google Apps Script** version of the YOYAKU product creati
 Base: https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/
 
 Variants tested (44 total combinations):
-✓ VINYL001_600.webp     ✓ VINYL001_1_600.webp     ... ✓ VINYL001_10_600.webp
-✓ VINYL001_600.jpg      ✓ VINYL001_1_600.jpg      ... ✓ VINYL001_10_600.jpg
-✓ VINYL001_600.jpeg     ✓ VINYL001_1_600.jpeg     ... ✓ VINYL001_10_600.jpeg
-✓ VINYL001_600.png      ✓ VINYL001_1_600.png      ... ✓ VINYL001_10_600.png
+✓ VINYL001.webp     ✓ VINYL001_1.webp     ... ✓ VINYL001_10.webp
+✓ VINYL001.jpg      ✓ VINYL001_1.jpg      ... ✓ VINYL001_10.jpg
+✓ VINYL001.jpeg     ✓ VINYL001_1.jpeg     ... ✓ VINYL001_10.jpeg
+✓ VINYL001.png      ✓ VINYL001_1.png      ... ✓ VINYL001_10.png
 
 HTTP HEAD request for each → Only existing images added (200 OK)
 ```

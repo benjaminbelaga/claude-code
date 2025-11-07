@@ -129,12 +129,12 @@ VINYL001 | Aphex Twin - SAW 85-92 | aphex-twin-saw-85-92 | Classic album | DEEJA
 Upload to Digital Ocean Spaces:
 ```
 https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/
-  VINYL001_1_600.jpg
-  VINYL001_2_600.jpg
+  VINYL001_1.jpg
+  VINYL001_2.jpg
   ...
 ```
 
-Pattern: `{SKU}_{1..10}_600.{format}`
+Pattern: `{SKU}_{1..10}.{format}`
 
 ---
 

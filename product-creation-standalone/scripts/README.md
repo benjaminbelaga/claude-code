@@ -13,10 +13,10 @@ Strictly compliant with WP All Import #852 configuration.
 - Tries multiple variants: no suffix, `_1`, `_2`, ..., `_10`
 - Skips missing images (no 404 errors)
 - Example: For SKU `VINYL001`, tries:
-  - `VINYL001_600.webp`
-  - `VINYL001_600.jpg`
-  - `VINYL001_1_600.webp`
-  - `VINYL001_1_600.jpg`
+  - `VINYL001.webp`
+  - `VINYL001.jpg`
+  - `VINYL001_1.webp`
+  - `VINYL001_1.jpg`
   - ... up to `_10`
 
 ✅ **WP All Import #852 Compliance**
@@ -166,15 +166,15 @@ For SKU `VINYL001`, the script tests:
 
 ```
 https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/
-  ├─ VINYL001_600.webp
-  ├─ VINYL001_600.jpg
-  ├─ VINYL001_600.jpeg
-  ├─ VINYL001_600.png
-  ├─ VINYL001_1_600.webp
-  ├─ VINYL001_1_600.jpg
-  ├─ VINYL001_1_600.jpeg
-  ├─ VINYL001_1_600.png
-  ├─ VINYL001_2_600.webp
+  ├─ VINYL001.webp
+  ├─ VINYL001.jpg
+  ├─ VINYL001.jpeg
+  ├─ VINYL001.png
+  ├─ VINYL001_1.webp
+  ├─ VINYL001_1.jpg
+  ├─ VINYL001_1.jpeg
+  ├─ VINYL001_1.png
+  ├─ VINYL001_2.webp
   ├─ ... (up to _10)
 ```
 

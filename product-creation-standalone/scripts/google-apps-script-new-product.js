@@ -348,7 +348,7 @@ function testAndCollectImages_(sku) {
 
   variants.forEach(variant => {
     formats.forEach(format => {
-      const url = base + sku + variant + '_600.' + format;
+      const url = base + sku + variant + '.' + format;
 
       // Skip if already tested
       if (tested.has(url)) return;
