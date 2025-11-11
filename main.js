@@ -48,44 +48,55 @@ function onOpen() {
 
   menu.addSeparator();
 
-  // --- Main Site Menus ---
-  const yoyakuMenu = ui.createMenu('🛒 YOYAKU.io Tools');
-  yoyakuMenu.addItem('Import NEW products', 'runYoyakuNewImport');
-  yoyakuMenu.addItem('Import PRE-ORDER products', 'runYoyakuPreOrderImport');
-  yoyakuMenu.addSeparator();
+  // --- New Product (API) - Create products via API on both sites ---
+  const newProductAPIMenu = ui.createMenu('⚡ New Product (API)');
 
-  // Import 852 - Create New Products (moved from Update Stock menu)
-  const import852Menu = ui.createMenu('🚀 Create New Products (Import 852)');
-  import852Menu.addItem('📦 Create New Products (API Direct)', 'processImport852NewProductsAPI');
-  import852Menu.addSeparator();
-  import852Menu.addItem('🧪 Test Import 852 API', 'testImport852API');
-  import852Menu.addItem('🔍 Validate Configuration', 'validateImport852Config');
-  import852Menu.addItem('📊 View Dashboard', 'showImport852Dashboard');
-  import852Menu.addSeparator();
-  import852Menu.addItem('⚙️ Setup Configuration', 'setupImport852Configuration');
-  import852Menu.addItem('🔄 Reset Configuration', 'resetImport852Configuration');
-  import852Menu.addSeparator();
-  import852Menu.addItem('📋 Legacy WP Import Instructions', 'showLegacyImport852Instructions');
-  yoyakuMenu.addSubMenu(import852Menu);
+  // Auto-generate - UNE SEULE FOIS (en première position)
+  newProductAPIMenu.addItem('🔄 Auto-generate missing columns (T to BI)', 'menuAutoGenerateColumns');
+  newProductAPIMenu.addSeparator();
+
+  // YOYAKU.IO - NEW REST API (not WP Import!)
+  const yoyakuAPIMenu = ui.createMenu('⚡ YOYAKU.IO');
+  yoyakuAPIMenu.addItem('⚡ Create New Products (NEW REST API)', 'processImport852NewProductsAPI');
+  yoyakuAPIMenu.addSeparator();
+  yoyakuAPIMenu.addItem('⚡ Test Import API', 'testImport852API');
+  yoyakuAPIMenu.addItem('🔍 Validate Configuration', 'validateImport852Config');
+  yoyakuAPIMenu.addItem('📊 View Dashboard', 'showImport852Dashboard');
+  yoyakuAPIMenu.addSeparator();
+  yoyakuAPIMenu.addItem('⚙️ Setup Configuration', 'setupImport852Configuration');
+  yoyakuAPIMenu.addItem('🔄 Reset Configuration', 'resetImport852Configuration');
+  yoyakuAPIMenu.addSeparator();
+  yoyakuAPIMenu.addItem('📋 OLD Method: WP Import Instructions', 'showLegacyImport852Instructions');
+  newProductAPIMenu.addSubMenu(yoyakuAPIMenu);
+
+  // YYD.FR - NEW YOYAKU API v2.3.0 (not WP Import!)
+  const yydAPIMenu = ui.createMenu('⚡ YYD.FR');
+  yydAPIMenu.addItem('⚡ Create New Products (NEW YOYAKU API v2.3.0)', 'processImport935NewProductsAPI');
+  yydAPIMenu.addSeparator();
+  yydAPIMenu.addItem('⚡ Test Import API', 'testImport935API');
+  yydAPIMenu.addItem('🔍 Validate Configuration', 'validateImport935Config');
+  yydAPIMenu.addItem('📊 View Dashboard', 'showImport935Dashboard');
+  yydAPIMenu.addSeparator();
+  yydAPIMenu.addItem('⚙️ Setup Configuration', 'setupImport935Configuration');
+  yydAPIMenu.addSeparator();
+  yydAPIMenu.addItem('📋 OLD Method: WP Import Instructions', 'showLegacyImport935Instructions');
+  newProductAPIMenu.addSubMenu(yydAPIMenu);
+
+  menu.addSubMenu(newProductAPIMenu);
+
+  menu.addSeparator();
+
+  // --- Main Site Menus (LEGACY - For backward compatibility only) ---
+  // ⚠️ DEPRECATED: Use "New Product (API)" menu instead for all new imports
+  const yoyakuMenu = ui.createMenu('🛒 YOYAKU.io Tools (LEGACY)');
+  yoyakuMenu.addItem('⚠️ OLD: Import NEW products (wp-load.php)', 'runYoyakuNewImport');
+  yoyakuMenu.addItem('⚠️ OLD: Import PRE-ORDER products', 'runYoyakuPreOrderImport');
 
   menu.addSubMenu(yoyakuMenu);
 
-  const yydMenu = ui.createMenu('📦 YYDistribution Tools');
-  yydMenu.addItem('Import products', 'runYYDImport');
-  yydMenu.addSeparator();
-
-  // Import 935 - Create New Products (API v2.3.0)
-  const import935Menu = ui.createMenu('🚀 Create New Products (Import 935)');
-  import935Menu.addItem('📦 Create New Products (API v2.3.0)', 'processImport935NewProductsAPI');
-  import935Menu.addSeparator();
-  import935Menu.addItem('🧪 Test Import 935 API', 'testImport935API');
-  import935Menu.addItem('🔍 Validate Configuration', 'validateImport935Config');
-  import935Menu.addItem('📊 View Dashboard', 'showImport935Dashboard');
-  import935Menu.addSeparator();
-  import935Menu.addItem('⚙️ Setup Configuration', 'setupImport935Configuration');
-  import935Menu.addSeparator();
-  import935Menu.addItem('📋 Legacy WP Import Instructions', 'showLegacyImport935Instructions');
-  yydMenu.addSubMenu(import935Menu);
+  // ⚠️ DEPRECATED: Use "New Product (API)" menu instead for all new imports
+  const yydMenu = ui.createMenu('📦 YYDistribution Tools (LEGACY)');
+  yydMenu.addItem('⚠️ OLD: Import products (wp-load.php)', 'runYYDImport');
 
   menu.addSubMenu(yydMenu);
 
@@ -108,6 +119,9 @@ function onOpen() {
   const utilsMenu = ui.createMenu('⚙️ Utils');
   utilsMenu.addItem('🔤 Test Slugify Function', 'testSlugifyFunction');
   utilsMenu.addItem('🌐 Test Check URL Function', 'testCheckUrlFunction');
+  utilsMenu.addSeparator();
+  utilsMenu.addItem('🗑️ Clear Validator Cache', 'clearValidatorCache');
+  utilsMenu.addItem('📊 View Cache Stats', 'showCacheStats');
   utilsMenu.addSeparator();
   utilsMenu.addItem('🔍 Diagnostic Automatique Complet', 'runFullDiagnostic');
   utilsMenu.addItem('🧠 Diagnostic Analyse Intelligente', 'diagnoseIntelligentAnalysis');
