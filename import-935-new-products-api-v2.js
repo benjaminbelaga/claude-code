@@ -41,7 +41,7 @@ const IMPORT_935_CONFIG = {
     baseUrl: 'https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/images/',
     pattern: '{sku}_{index}_600.jpg',
     count: 10,
-    validateExistence: false  // YYD images may not all exist
+    validateExistence: false  // API v2.4.1+ copies images from YOYAKU.IO automatically
   },
 
   // Default values (matching WP Import 935 - B2B specific!)
@@ -148,10 +148,10 @@ function processImport935NewProductsAPI() {
  * @returns {Object} Processing results
  */
 function executeImport935() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('update stock');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('wp import new product');
 
   if (!sheet) {
-    throw new Error('Sheet "update stock" not found. Please create it first.');
+    throw new Error('Sheet "wp import new product" not found. Please create it first.');
   }
 
   // Get data with headers
@@ -161,11 +161,12 @@ function executeImport935() {
     throw new Error('No data found in sheet. Please add products to import.');
   }
 
+  const originalHeaders = data[0]; // Keep original headers for error messages
   const headers = normalizeHeaders935(data[0]);
-  const columnMap = createColumnMap935(headers);
+  const columnMap = createColumnMap935(headers, originalHeaders);
 
   // Validate required columns
-  validateRequiredColumns935(columnMap);
+  validateRequiredColumns935(columnMap, originalHeaders);
 
   // Process products
   const results = {
@@ -183,6 +184,7 @@ function executeImport935() {
   // Process each row (skip header)
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
+    const rowNumber = i + 1; // Actual row in sheet (1-indexed)
 
     // Skip empty rows
     if (!row[columnMap.sku] || row[columnMap.sku].toString().trim() === '') {
@@ -195,7 +197,7 @@ function executeImport935() {
 
       if (validationErrors.length > 0) {
         results.errors.push({
-          row: i + 1,
+          row: rowNumber,
           sku: productData.sku,
           errors: validationErrors
         });
@@ -203,12 +205,54 @@ function executeImport935() {
         continue;
       }
 
+      // CRITICAL: Check if at least 1 image exists (JPG/PNG/WebP)
+      const imageCheck = checkImagesExist935(productData.sku);
+      if (imageCheck.count === 0) {
+        // No images found - SKIP and mark orange
+        markRowAsError935(sheet, rowNumber, 'ERROR: No image found (JPG/PNG/WebP)');
+        results.errors.push({
+          row: rowNumber,
+          sku: productData.sku,
+          errors: ['No image found - Product skipped']
+        });
+        results.failed++;
+        continue;
+      }
+
+      // Check if MP3 exists (SKU_1.mp3)
+      const mp3Url = `https://yydistribution.ams3.digitaloceanspaces.com/yyplayer/mp3/${productData.sku}_1.mp3`;
+      const mp3Exists = isUrlAccessible(mp3Url);
+
+      if (!mp3Exists) {
+        // Ask user if they want to import anyway
+        const ui = SpreadsheetApp.getUi();
+        const response = ui.alert(
+          '⚠️ MP3 Missing',
+          `Row ${rowNumber} (${productData.sku}):\n\n` +
+          `MP3 file not found at:\n${mp3Url}\n\n` +
+          `Do you want to import this product anyway?`,
+          ui.ButtonSet.YES_NO
+        );
+
+        if (response !== ui.Button.YES) {
+          // User chose not to import - SKIP and mark orange
+          markRowAsError935(sheet, rowNumber, 'ERROR: No MP3 - User chose not to import');
+          results.errors.push({
+            row: rowNumber,
+            sku: productData.sku,
+            errors: ['No MP3 - User cancelled import']
+          });
+          results.failed++;
+          continue;
+        }
+      }
+
       // Create product via API v2.3.0
       const apiResult = createProductViaAPIv2(productData);
 
       if (apiResult.success) {
         results.products.push({
-          row: i + 1,
+          row: rowNumber,
           sku: productData.sku,
           status: apiResult.action,  // 'created' or 'updated'
           productId: apiResult.productId,
@@ -222,7 +266,7 @@ function executeImport935() {
         }
       } else {
         results.products.push({
-          row: i + 1,
+          row: rowNumber,
           sku: productData.sku,
           status: 'failed',
           error: apiResult.error
@@ -334,32 +378,25 @@ function validateProductData935(productData) {
   const errors = [];
 
   // Required fields
-  if (!productData.sku || !productData.sku.match(/^[A-Z0-9]{3,10}$/)) {
-    errors.push('SKU must be 3-10 uppercase alphanumeric characters');
+  if (!productData.sku || productData.sku.trim() === '') {
+    errors.push('❌ SKU manquant\n→ Vérifiez la colonne "SKU" dans votre ligne');
   }
 
   if (!productData.title || productData.title.length === 0) {
-    errors.push('Title is required');
+    errors.push('❌ Titre manquant\n→ Vérifiez la colonne "title" dans votre ligne');
   }
 
   if (!productData.label || productData.label.length === 0) {
-    errors.push('Label is required');
+    errors.push('❌ Label manquant\n→ Vérifiez la colonne "label" dans votre ligne');
   }
 
   if (!productData.priceYyd || !productData.priceYyd.match(/^[0-9]+[,.]?[0-9]*$/)) {
-    errors.push('Price YYD is required and must be a valid number');
+    errors.push(`❌ Prix YYD invalide: "${productData.priceYyd}"\n→ Le prix doit être un nombre (exemple: 12,50 ou 12.50)`);
   }
 
-  // B2B business rules
-  if (productData.releaseDate) {
-    const releaseDate = new Date(productData.releaseDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (releaseDate <= today) {
-      errors.push('Release date must be in the future for Import 935 new products');
-    }
-  }
+  // B2B business rules - REMOVED (YYD.FR accepts past dates for stock products)
+  // YYD.FR is for distributors, not just pre-orders
+  // Products can be already released and in stock
 
   return errors;
 }
@@ -403,16 +440,15 @@ function createProductViaAPIv2(productData) {
       playlist_files: productData.playlistFiles || '',
       features: productData.feature || '',
 
-      // Music metadata
-      label: productData.label || '',
-      distributor: productData.distributor || '',
-      format: productData.format || '',
+      // Music metadata - FORCE STRING CONVERSION (prevent numeric IDs from Google Sheets)
+      // Fixed 2025-11-09: Google Sheets VLOOKUP returns numbers, must force to string
+      label: productData.label ? String(productData.label) : '',
+      distributor: productData.distributor ? String(productData.distributor) : '',
+      format: productData.format ? String(productData.format) : '',
 
-      // Artists array
-      artists: productData.artists || [],
-
-      // Genres array
-      genres: productData.genres || [],
+      // Artists & Genres - FORCE STRING for each element
+      artists: (productData.artists || []).map(a => String(a)),
+      genres: (productData.genres || []).map(g => String(g)),
 
       // Tags array
       tags: productData.tags || []
@@ -445,12 +481,16 @@ function createProductViaAPIv2(productData) {
 }
 
 /**
- * Call YOYAKU API v2.3.0
+ * Call YOYAKU API v2 (YYD.FR)
+ * Requires Bearer token authentication
  * @param {Object} payload - Request payload
  * @returns {Object} API response
  */
 function callYOYAKUAPIv2(payload) {
   const url = IMPORT_935_CONFIG.api.baseUrl + IMPORT_935_CONFIG.api.endpoint;
+
+  // Bearer token from wp-config.php (YOYAKU_API_BEARER_TOKEN)
+  const bearerToken = 'b5d41ad4797c562c41b42d41f1328554debead46a8ebc340943efd4d7b5676b2';
 
   const options = {
     method: 'post',
@@ -458,7 +498,8 @@ function callYOYAKUAPIv2(payload) {
     payload: JSON.stringify(payload),
     muteHttpExceptions: true,
     headers: {
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${bearerToken}`
     }
   };
 
@@ -491,13 +532,23 @@ function callYOYAKUAPIv2(payload) {
 // ========================================
 
 /**
- * Convert European decimal to English decimal
+ * Convert European decimal to English decimal (B2B version - NO rounding)
  * @param {string} value - European format (16,4)
- * @returns {string} English format (16.4)
+ * @returns {string} English format (16.40) - exact value with 2 decimals
  */
 function convertEuropeanToEnglishDecimal935(value) {
   if (!value) return '';
-  return value.toString().replace(',', '.');
+
+  // Convert comma to period
+  const englishDecimal = value.toString().replace(',', '.');
+
+  // Parse to float
+  const numberValue = parseFloat(englishDecimal);
+  if (isNaN(numberValue)) return '';
+
+  // B2B: NO rounding, return exact value with 2 decimal places
+  // (vs B2C which rounds to nearest 0.10)
+  return numberValue.toFixed(2);
 }
 
 /**
@@ -515,42 +566,70 @@ function normalizeHeaders935(headers) {
 }
 
 /**
- * Create column index mapping
+ * Create column index mapping with flexible matching
  * @param {Array} headers - Normalized headers
+ * @param {Array} originalHeaders - Original headers (before normalization)
  * @returns {Object} Column map
  */
-function createColumnMap935(headers) {
+function createColumnMap935(headers, originalHeaders) {
   const map = {};
 
   headers.forEach((header, index) => {
     map[header] = index;
   });
 
-  // Handle YYD-specific column names
-  if (map['priceyydistribution'] === undefined) {
-    map['priceyydistribution'] = map['priceyyd'] || map['price'];
+  // FLEXIBLE MAPPING - Handle multiple column name variations
+  const columnAliases = {
+    'sku': ['sku', 'productsku', 'cataloguenumber'],
+    'title': ['title', 'producttitle', 'name', 'productname'],
+    'label': ['label', 'musiclabel', 'recordlabel'],
+    'priceyydistribution': ['priceyydistribution', 'priceyyd', 'yydprice', 'b2bprice', 'price']
+  };
+
+  // Try to find column using aliases
+  for (const [canonical, aliases] of Object.entries(columnAliases)) {
+    if (map[canonical] === undefined) {
+      for (const alias of aliases) {
+        if (map[alias] !== undefined) {
+          map[canonical] = map[alias];
+          break;
+        }
+      }
+    }
   }
 
   return map;
 }
 
 /**
- * Validate required columns exist
+ * Validate required columns exist with helpful error messages
  * @param {Object} columnMap - Column mapping
+ * @param {Array} originalHeaders - Original headers for error message
  * @throws {Error} If required columns missing
  */
-function validateRequiredColumns935(columnMap) {
-  const required = ['sku', 'title', 'label', 'priceyydistribution'];
+function validateRequiredColumns935(columnMap, originalHeaders) {
+  const required = {
+    'sku': 'SKU or Catalogue Number',
+    'title': 'Title or Product Name',
+    'label': 'Label or Music Label',
+    'priceyydistribution': 'price yydistribution or B2B Price'
+  };
+
   const missing = [];
 
-  for (const col of required) {
+  for (const [col, description] of Object.entries(required)) {
     if (columnMap[col] === undefined) {
-      missing.push(col);
+      missing.push(description);
     }
   }
 
   if (missing.length > 0) {
-    throw new Error(`Required columns missing: ${missing.join(', ')}`);
+    const availableColumns = originalHeaders.join(', ');
+    throw new Error(
+      `Required columns missing: ${missing.join(', ')}\n\n` +
+      `Available columns in sheet: ${availableColumns}\n\n` +
+      `Please ensure your sheet has these required columns.`
+    );
   }
 }
 
@@ -565,7 +644,7 @@ function validateRequiredColumns935(columnMap) {
 function displayImport935Results(results) {
   const ui = SpreadsheetApp.getUi();
 
-  let message = `Import 935 API v2.3.0 Complete!\n\n`;
+  let message = `Import API YYD v2.3.0 Complete!\n\n`;
   message += `⏱️ Processing time: ${results.processingTime}s\n\n`;
   message += `📊 Results:\n`;
   message += `• Processed: ${results.processed}\n`;
@@ -582,22 +661,33 @@ function displayImport935Results(results) {
   }
 
   if (results.failed > 0) {
-    message += `❌ ${results.failed} products failed. Check logs for details.\n\n`;
+    message += `❌ ${results.failed} products failed:\n\n`;
+
+    // Show validation errors
+    if (results.errors && results.errors.length > 0) {
+      results.errors.forEach(err => {
+        message += `• Row ${err.row} (${err.sku}): ${err.errors.join(', ')}\n`;
+      });
+    }
+
+    // Show API errors
+    const failedProducts = results.products.filter(p => p.status === 'failed');
+    failedProducts.forEach(p => {
+      message += `• Row ${p.row} (${p.sku}): ${p.error}\n`;
+    });
+    message += `\n`;
   }
 
   message += `🆕 API v2.3.0 Features Applied:\n`;
   message += `• Backorders: Enabled (B2B)\n`;
   message += `• Low stock alert: 10 units\n`;
   message += `• Shipping class: ID 1231\n`;
-  message += `• UPS customs: 5 fields auto-filled\n\n`;
+  message += `• UPS customs: 5 fields auto-filled`;
 
-  message += `💡 Tip: Products created with pre-order status.\n`;
-  message += `Use Import 953 to update stock when available.`;
-
-  ui.alert('Import 935 Results', message, ui.ButtonSet.OK);
+  ui.alert('Import API YYD Results', message, ui.ButtonSet.OK);
 
   // Log detailed results
-  console.log('Import 935 Results:', results);
+  console.log('Import API YYD Results:', results);
 
   // Write results to sheet
   if (results.products.length > 0) {
@@ -612,10 +702,10 @@ function displayImport935Results(results) {
 function writeResultsToSheet935(results) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('Import 935 Results');
+    let sheet = ss.getSheetByName('Import API YYD Results');
 
     if (!sheet) {
-      sheet = ss.insertSheet('Import 935 Results');
+      sheet = ss.insertSheet('Import API YYD Results');
     }
 
     // Clear existing content
@@ -729,17 +819,17 @@ function validateImport935Config() {
   };
 
   // Check sheet
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('update stock');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('wp import new product');
   checks.sheetExists = sheet !== null;
 
   if (sheet) {
     // Check columns
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const normalized = normalizeHeaders935(headers);
-    const columnMap = createColumnMap935(normalized);
+    const columnMap = createColumnMap935(normalized, headers); // Pass original headers
 
     try {
-      validateRequiredColumns935(columnMap);
+      validateRequiredColumns935(columnMap, headers); // Pass original headers
       checks.columnsValid = true;
     } catch (error) {
       console.error('Column validation failed:', error);
@@ -835,6 +925,54 @@ function setupImport935Configuration() {
     'No manual configuration needed!',
     ui.ButtonSet.OK
   );
+}
+
+// ========================================
+// IMAGE & MP3 VALIDATION HELPERS
+// ========================================
+
+/**
+ * Check if at least 1 image exists for SKU (any format: JPG/PNG/WebP)
+ * @param {string} sku - Product SKU
+ * @returns {Object} {count: number, foundFormats: Array}
+ */
+function checkImagesExist935(sku) {
+  const baseUrl = IMPORT_935_CONFIG.images.baseUrl;
+  const formats = ['jpg', 'png', 'webp'];
+  let count = 0;
+  const foundFormats = [];
+
+  // Check only first image (SKU_1) in all formats
+  for (const format of formats) {
+    const imageUrl = `${baseUrl}${sku}_1_600.${format}`;
+    if (isUrlAccessible(imageUrl)) {
+      count++;
+      foundFormats.push(format);
+      break; // Found at least one, that's enough
+    }
+  }
+
+  return { count, foundFormats };
+}
+
+/**
+ * Mark row as error (orange background + error message in column E)
+ * Column E is "quantity" which is always empty at import time
+ * @param {Sheet} sheet - Google Sheet object
+ * @param {number} rowNumber - Row number (1-indexed)
+ * @param {string} errorMessage - Error message to display
+ */
+function markRowAsError935(sheet, rowNumber, errorMessage) {
+  // Color entire row orange
+  const lastColumn = sheet.getLastColumn();
+  const rowRange = sheet.getRange(rowNumber, 1, 1, lastColumn);
+  rowRange.setBackground('#FF9800'); // Orange color
+
+  // Put error message in column E (column 5 = quantity)
+  const columnE = sheet.getRange(rowNumber, 5);
+  columnE.setValue(errorMessage);
+  columnE.setFontWeight('bold');
+  columnE.setFontColor('#D32F2F'); // Red text
 }
 
 /**
