@@ -1,5 +1,5 @@
 # BENJAMIN BELAGA - GLOBAL USER MEMORY
-# v5.6.0 - Advanced hooks system + agent optimization | 2025-11-20
+# v5.7.0 - Mandatory intervention logging system | 2025-11-21
 
 ## 👤 IDENTITY & CONTEXT
 
@@ -409,6 +409,31 @@ git add [files] && git commit -m "Message - Benjamin Belaga" && git push origin 
 
 ## 📝 AI AGENT NOTES
 
+**🚨 MANDATORY POST-INTERVENTION LOGGING (ALL CHANGES):**
+
+**CRITICAL RULE:** À chaque modification sur YYD.FR (B2B) ou YOYAKU.IO (B2C), tu DOIS documenter dans les repos de logs **AVANT** de terminer la session.
+
+**Scope:** Theme, Plugin, Config, Webhook, Cron, Database, Infrastructure - **TOUT changement technique**
+
+**Workflow obligatoire:**
+1. **Intervention** : Effectuer la modification (code/config/deployment)
+2. **Test** : Vérifier en production
+3. **Document** : Créer le log détaillé (template: `~/repos/logs-{site}/templates/intervention-template.md`)
+4. **Commit** : Push dans le repo GitHub approprié
+5. **Update CHANGELOG** : Ajouter l'entrée en haut de CHANGELOG.md
+
+**Why:** Les problèmes sont souvent interconnectés. Sans logs, impossible de tracer l'origine des bugs récurrents.
+
+**Repos:**
+- YYD.FR (B2B): `~/repos/logs-yydistribution-fr/` → https://github.com/benjaminbelaga/logs-yydistribution-fr
+- YOYAKU.IO (B2C): `~/repos/logs-yoyaku-io/` → https://github.com/benjaminbelaga/logs-yoyaku-io
+
+**Template structure:** Contexte → Root Cause → Solution → Tests → Deployment → Rollback → Lessons Learned
+
+**AI Behavior:** NEVER terminate a session with code changes without creating the log entry.
+
+---
+
 **🚨 MANDATORY PRE-ACTION (Cloudways ops):**
 1. READ "CLOUDWAYS QUICK REFERENCE" (line 285)
 2. VERIFY path: `/home/870689.cloudwaysapps.com/[APP_ID]/public_html`
@@ -439,7 +464,15 @@ git add [files] && git commit -m "Message - Benjamin Belaga" && git push origin 
 **Code:** Check existing before creating | Archive obsolete | French → English | Benjamin Belaga author
 **Performance:** Load <4.0 (abort >5.0) | MySQL <30% | Orders >20k/sec | Abort if >10% degradation
 
-**Mental Model:** User (FR) → Agent (FR) → Code (EN) → Deploy (drift+test) → Cache (WP+Breeze+CF!) → Email (ops pedagogical)
+**Mental Model:** User (FR) → Agent (FR) → Code (EN) → Deploy (drift+test) → Cache (WP+Breeze+CF!) → **Document (logs repo!)** → Email (ops pedagogical)
+
+**Decision Tree:**
+- Code change? → Document in logs
+- Config change? → Document in logs
+- Plugin/theme update? → Document in logs
+- Webhook/cron modification? → Document in logs
+- Database query executed? → Document in logs
+- **NO exceptions** - even "small" changes get logged
 
 ---
 
