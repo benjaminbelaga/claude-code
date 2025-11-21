@@ -1,5 +1,5 @@
 # BENJAMIN BELAGA - GLOBAL USER MEMORY
-# v5.7.0 - Mandatory intervention logging system | 2025-11-21
+# v5.8.0 - Automatic session closure logging protocol | 2025-11-21
 
 ## 👤 IDENTITY & CONTEXT
 
@@ -379,7 +379,37 @@ rsync -avh --link-dest=../yesterday/uploads current/uploads/
 35. **Container preservation:** Running containers and their images NEVER touched by safe cleanup (prune -f only stopped/unused)
 36. **Docker monitoring:** Check `docker system df -v` regularly → Shows reclaimable space per resource type
 
-**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy, disk safety, email spam prevention, proactive monitoring, Docker efficiency
+**PayPal Webhook & Plugin Cache (2025-11-21):**
+37. **Service container cache:** Plugin DI containers can cache obsolete values despite correct DB data → Always flush cache after plugin updates
+38. **PayPal API endpoint logic:** Plugin chooses API based on `is_connected` flag evaluated from service container (cached) not database (real-time)
+39. **Webhook verification failures:** If using wrong API (`api.woocommerce.com` vs `api-m.paypal.com`) → 404 errors → Orders without PayPal ID → Duplications
+40. **Cache purge mandatory:** After PayPal plugin update/config changes: `wp cache flush && wp breeze purge --cache=all` → Rebuild service container
+41. **Detection pattern:** Webhook logs showing `api.woocommerce.com` (deprecated middleware) instead of `api-m.paypal.com` (direct API)
+
+**WooCommerce Hook Type Safety (2025-11-21):**
+42. **Hook parameter inconsistency:** `woocommerce_checkout_order_created` passes `WC_Order` object, other order hooks pass `int $order_id`
+43. **Type error pattern:** "Illegal offset type" = Trying to use object as array key → PHP only allows `int|string` keys
+44. **Type-agnostic solution:** Functions used by multiple hooks MUST handle all possible parameter types
+45. **Pattern:**
+```php
+// ❌ Assumes int
+function callback($order_id) {
+    $array[$order_id] = true;  // Crash if $order_id = WC_Order
+}
+
+// ✅ Handles int AND object
+function callback($order_or_id) {
+    if (is_a($order_or_id, 'WC_Order')) {
+        $order_id = $order_or_id->get_id();
+    } else {
+        $order_id = (int) $order_or_id;
+    }
+    $array[$order_id] = true;  // Safe
+}
+```
+46. **Testing requirement:** Test ALL checkout flows (PayPal button, Advanced Card Payments, etc.) for MU-plugins affecting order creation
+
+**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy, disk safety, email spam prevention, proactive monitoring, Docker efficiency, webhook reliability, type safety
 
 ---
 
@@ -421,6 +451,8 @@ git add [files] && git commit -m "Message - Benjamin Belaga" && git push origin 
 3. **Document** : Créer le log détaillé (template: `~/repos/logs-{site}/templates/intervention-template.md`)
 4. **Commit** : Push dans le repo GitHub approprié
 5. **Update CHANGELOG** : Ajouter l'entrée en haut de CHANGELOG.md
+6. **Update README** : Mettre à jour "Dernières Interventions" avec la nouvelle entrée
+7. **Create symlinks** : Ajouter liens symboliques dans `/by-category/[category]/`
 
 **Why:** Les problèmes sont souvent interconnectés. Sans logs, impossible de tracer l'origine des bugs récurrents.
 
@@ -430,7 +462,84 @@ git add [files] && git commit -m "Message - Benjamin Belaga" && git push origin 
 
 **Template structure:** Contexte → Root Cause → Solution → Tests → Deployment → Rollback → Lessons Learned
 
-**AI Behavior:** NEVER terminate a session with code changes without creating the log entry.
+**🎯 SESSION CLOSURE TRIGGERS (AUTOMATIC LOGGING):**
+
+**User says ANY of these → IMMEDIATE logging protocol:**
+- "fini" / "terminé" / "c'est bon" / "voilà" / "ok"
+- "on passe à autre chose" / "next" / "continue"
+- "merci" (if changes were made)
+- ANY indication that task is complete
+
+**AI MUST automatically:**
+1. **Detect changes made** during session:
+   - Git repos modified? → List files
+   - Production files deployed? → List paths
+   - Database queries executed? → Note tables
+   - Config changes? → Note settings
+
+2. **If NO changes** → Confirm "Aucune modification technique, pas de log nécessaire"
+
+3. **If changes detected** → EXECUTE FULL LOGGING PROTOCOL:
+   ```bash
+   # Step 1: Determine site (YYD or YOYAKU)
+   SITE="yyd" or "yoyaku"
+
+   # Step 2: Create intervention log
+   DATE=$(date +%Y-%m-%d)
+   MONTH=$(date +%m-%B | sed 's/-/ /' | awk '{print $1"-"tolower($2)}')
+   LOG_PATH="~/repos/logs-$SITE-*/2025/$MONTH/$DATE-[descriptive-name].md"
+
+   # Step 3: Use template
+   cp ~/repos/logs-$SITE-*/templates/intervention-template.md $LOG_PATH
+   # Fill ALL sections (no empty sections!)
+
+   # Step 4: Update CHANGELOG.md (add at top)
+   # Step 5: Update README.md (add to "Dernières Interventions")
+   # Step 6: Create symlinks in by-category/
+
+   # Step 7: Git commit & push
+   cd ~/repos/logs-$SITE-*
+   git add .
+   git commit -m "[LOGS] [CATEGORY] Brief description
+
+   Benjamin Belaga"
+   git push origin main
+
+   # Step 8: Verify & confirm to user
+   echo "✅ Logs créés et pushés sur GitHub"
+   ```
+
+**CATEGORIES (detect automatically):**
+- Theme files → `[THEME]`
+- Plugin files → `[PLUGIN]`
+- WooCommerce settings → `[CONFIG]`
+- Webhook/API → `[WEBHOOK]`
+- Cron jobs → `[CRON]`
+- Database queries → `[DATABASE]`
+- Server/DNS/SSL → `[INFRASTRUCTURE]`
+
+**CRITICAL DETECTION PATTERNS:**
+```bash
+# If files modified in:
+~/repos/yyd-theme/ → YYD.FR B2B + [THEME]
+~/repos/yoyaku-theme/ → YOYAKU.IO B2C + [THEME]
+~/repos/ysc/ → YYD.FR B2B + [PLUGIN] (YSC)
+~/repos/yio/ → YOYAKU.IO B2C + [PLUGIN] (YIO)
+~/repos/yofr/ → YYD.FR B2B + [PLUGIN] (YOFR)
+~/work/yid-translation/ → Both sites + [PLUGIN] (YID)
+
+# If deployed to production via:
+SFTP/SSH → Check app ID (jfnkmjmfer=YOYAKU, akrjekfvzk=YYD)
+wp-cli commands → Parse site path
+```
+
+**AI Behavior:**
+- ✅ PROACTIVE: Detect "fini" → Immediately start logging protocol (NO asking "dois-je créer les logs?")
+- ✅ THOROUGH: Check ALL modified files/deployments during session
+- ✅ COMPLETE: Fill every section of intervention log (no placeholders)
+- ✅ VERIFY: Git status clean + GitHub push successful before confirming
+- ❌ NEVER ask "voulez-vous que je crée les logs?" - Just DO it!
+- ❌ NEVER skip sections in intervention log - Complete documentation required
 
 ---
 
