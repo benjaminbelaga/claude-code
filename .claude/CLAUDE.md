@@ -1,5 +1,5 @@
 # BENJAMIN BELAGA - GLOBAL USER MEMORY
-# v5.5.0 - Linear project management + drift detection | 2025-11-16
+# v5.6.0 - Advanced hooks system + agent optimization | 2025-11-20
 
 ## 👤 IDENTITY & CONTEXT
 
@@ -60,13 +60,16 @@ cd ~/tools/08-linear/ && python3 linear_automation.py
 yoyaku_load() {
   case "$1" in
     google|discogs|anthropic|cloudways|cloudflare|mcp-discogs) source ~/.credentials/yoyaku/api-keys/$1.env ;;
+    google-workspace|workspace|gw) source ~/.credentials/yoyaku/api-keys/google-workspace-admin.env ;;
+    gmail|gmail-smtp|email) source ~/.credentials/yoyaku/api-keys/gmail-smtp.env ;;
+    discord|discord-bot) source ~/.credentials/yoyaku/api-keys/discord.env ;;
     contabo|sftp) source ~/.credentials/yoyaku/passwords/$1.env ;;
-    all) for s in google discogs anthropic cloudways cloudflare mcp-discogs contabo sftp; do yoyaku_load $s; done ;;
+    all) for s in google discogs anthropic cloudways cloudflare mcp-discogs google-workspace gmail discord contabo sftp; do yoyaku_load $s; done ;;
   esac
 }
 ```
 
-**Credential Files:** google.env (GOOGLE_API_KEY), discogs.env (DISCOGS_TOKEN), anthropic.env, cloudways.env, cloudflare.env (zone IDs), mcp-discogs.env, woocommerce.env (WC_YYD_*, WC_YOYAKU_*), contabo.env, sftp.env (SFTP_YOYAKU_PASSWORD, SFTP_YYD_PASSWORD)
+**Credential Files:** google.env (GOOGLE_API_KEY), discogs.env (DISCOGS_TOKEN), anthropic.env, cloudways.env, cloudflare.env (zone IDs), mcp-discogs.env, **google-workspace-admin.env** (Google Workspace API - groups/users/calendar/drive), **gmail-smtp.env** (Email sending via ben@yoyaku.fr), **discord.env** (Discord Bot API - server/channel management), woocommerce.env (WC_YYD_*, WC_YOYAKU_*), contabo.env, sftp.env (SFTP_YOYAKU_PASSWORD, SFTP_YYD_PASSWORD)
 
 **Docs:** https://developers.cloudways.com/docs/ | https://api.cloudflare.com/ | https://api.contabo.com/ | https://mcp-discogs.yoyaku.fr
 
@@ -170,9 +173,33 @@ Author: Benjamin Belaga
 
 ---
 
-## 📧 EMAIL NOTIFICATIONS
-**Ops:** YOYAKU.IO → webmaster team + shop/ben@yoyaku.fr | YYD.FR → webmaster team + ben@yoyaku.fr | WP email, French, pedagogical
-**Dev:** Discord logs only, no email
+## 📧 EMAIL SENDING (Automatic Workflow)
+**Setup:** Gmail SMTP via `ben@yoyaku.fr` | App password auth | Auto-send enabled
+
+### 🚀 AUTO-SEND RULES (2025-11-20)
+
+**Triggers:** "envoie email", "mail à", "notifie par email", "écris un email"
+**Action:** SEND IMMEDIATELY without asking confirmation
+
+**User specifies recipients:** User will ALWAYS provide explicit email addresses
+- Example: "mail à seb@yoyaku.fr et didier@yoyaku.fr"
+- Example: "envoie à ben@yoyaku.fr"
+- NO aliases - Direct emails only
+
+**Script:** `~/tools/send-email-yoyaku.sh -t "email@domain.com" -s "Subject" -b "Body"`
+**Credentials:** `~/.credentials/yoyaku/api-keys/gmail-smtp.env`
+**Full Workflow:** `~/.claude/EMAIL-AUTO-WORKFLOW.md` ⭐
+
+### 📋 Email Types
+**Ops notifications:** YOYAKU.IO/YYD.FR operations | French, pedagogical, structured
+**Dev/Tech:** Discord logs (no email unless explicitly requested)
+**Incidents:** 🚨 tag for urgent issues
+
+**Example:**
+```bash
+User: "mail à seb@yoyaku.fr et didier@yoyaku.fr un recap"
+AI: [Creates content] → Sends immediately → Confirms
+```
 
 ---
 
@@ -243,6 +270,43 @@ Author: Benjamin Belaga
 
 ---
 
+## 🪝 HOOKS SYSTEM (v2.0.45+)
+**Location:** `~/.claude/hooks/` | **Config:** `~/.claude/settings.json`
+
+| Hook | Purpose | Implementation |
+|------|---------|----------------|
+| **SessionStart** | Load credentials, check connectivity, display context | `session-start.sh` |
+| **Stop** | Archive transcripts, generate metrics, Discord notifications | `stop.sh` |
+| **SubagentStart** | Track agent launches for performance metrics | `subagent-start.sh` |
+| **SubagentStop** | Track completions, generate daily stats | `subagent-stop.sh` |
+| **Notification** | Discord alerts for idle >5min, errors, warnings | `notification.sh` |
+| **PermissionRequest** ⭐ | Auto-approve safe patterns, deny dangerous ones | `permission-request.sh` |
+| **PreToolUse** | Drift check before Edit/Write operations | `pre-deploy-drift-check.sh` |
+| **PostToolUse** | Syntax validation after Edit/Write | `post-edit-verify.sh` |
+
+**PermissionRequest Auto-Approve Patterns:**
+- SSH/SFTP to yoyaku-cloudways, yoyaku-server
+- Cloudflare cache purge operations
+- Drift-check, sync-from-production scripts
+- WP-CLI safe commands (cache, list, get)
+- Git read-only operations (status, log, diff)
+- Scripts from `/Users/yoyaku/tools/`
+
+**Auto-Deny Patterns:**
+- `rm -rf /` or `~` (destructive)
+- `DROP TABLE`, `TRUNCATE` (database)
+- `chmod 777` (insecure permissions)
+- `git push --force` (requires explicit approval)
+
+**Metrics Tracking:**
+- Session archives: `~/.claude/session-archives/YYYYMMDD-HHMMSS.json`
+- Agent logs: `~/.claude/agent-logs/agents-YYYY-MM-DD.jsonl`
+- Daily stats: `~/.claude/agent-logs/stats-YYYY-MM-DD.json`
+
+**Discord Notifications:** Configured via `~/.credentials/yoyaku/api-keys/discord.env` → `DISCORD_WEBHOOK_MONITORING`
+
+---
+
 ## 🎓 LESSONS LEARNED
 
 **Data Processing:**
@@ -287,7 +351,35 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_YOYAKU
 ```
 20. **Script updated:** `cloudflare-purge-cache.sh` now uses API Key (100% reliable)
 
-**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy
+**Contabo Backup System (2025-11-20):**
+21. **Backup self-protection:** Scripts refuse to run if disk >80% (prevents server crash)
+22. **Backup D+ Strategy:** Rsync with hardlinks (like TimeMachine) = 86% space savings
+23. **Working pattern:**
+```bash
+# Hardlinks: Old files = 0 space, only new files copied
+rsync -avh --link-dest=../yesterday/uploads current/uploads/
+# YOYAKU: 15G base + 500MB/day × 6 = 18G total (vs 105G before)
+# YYD: 6G base + 200MB/day × 6 = 7.2G total (vs 40G before)
+```
+24. **Monitoring deduplication:** 1 alert/day/type max (prevents 465 duplicate emails)
+25. **Disk management:** Alert at 75%, block backups at 80%, critical at 90%
+
+**Contabo Monitoring & Logs (2025-11-20):**
+26. **Bash variable scope:** `local` only works inside functions (daily-digest.sh empty counters)
+27. **Email digest parsing:** `grep "Subject:"` shows full line → Use `sed 's/^Subject: //'` to extract
+28. **Log cleanup strategy:** PostgreSQL logs (.3.gz+ = 1.3G), truncate active logs >10MB to 10k lines
+29. **Disk monitoring:** Proactive alerts at 75% (planning), 80% (blocks backups), 90% (emergency)
+30. **Log rotation targets:** Keep .1 and .2 (recent), delete .3+ (old), .gz >30 days auto-delete
+
+**Contabo Docker Optimization (2025-11-21):**
+31. **Docker build cache:** Can grow to 25+ GB unnoticed → Prune regularly with `docker builder prune -af`
+32. **Dangling images:** `<none>` tags = obsolete layers from failed builds → Safe to remove with `docker image prune -f`
+33. **Docker cleanup safety:** ALWAYS verify running containers before/after cleanup → `docker ps` verification mandatory
+34. **Docker space recovery:** Build cache + dangling images = 30-35 GB typical recovery on active dev servers
+35. **Container preservation:** Running containers and their images NEVER touched by safe cleanup (prune -f only stopped/unused)
+36. **Docker monitoring:** Check `docker system df -v` regularly → Shows reclaimable space per resource type
+
+**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy, disk safety, email spam prevention, proactive monitoring, Docker efficiency
 
 ---
 
