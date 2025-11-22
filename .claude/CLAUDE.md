@@ -409,7 +409,19 @@ function callback($order_or_id) {
 ```
 46. **Testing requirement:** Test ALL checkout flows (PayPal button, Advanced Card Payments, etc.) for MU-plugins affecting order creation
 
-**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy, disk safety, email spam prevention, proactive monitoring, Docker efficiency, webhook reliability, type safety
+**Pending Orders Cleanup & Recovery (2025-11-21):**
+47. **Cross-reference before recovery emails:** Always check if pending order customers paid elsewhere (completed orders query)
+48. **Keep latest per customer:** When duplicates detected, keep LATEST order (most recent attempt), cancel older ones
+49. **Zero orders pattern:** €0.00 total = abandoned checkout during payment method selection, safe to cancel
+50. **Recovery email strategy:** Don't explain technical details, just "incident technique résolu" + payment link
+51. **Order-pay links security:** Use WooCommerce order key in URL: `/checkout/order-pay/{id}/?key={order_key}`
+52. **Recovery timeline:** Industry standard 40-60% recovery rate in 48-72h (not 24h)
+53. **Duplication detection threshold:** orders_per_customer > 1.1 = alert, 1.0 = perfect
+54. **Monitoring frequency:** Every 2-3h during incident recovery, then daily for 72h
+55. **SQL vs WP-CLI:** Direct SQL queries more reliable than `wp wc shop_order list` (parameter validation issues)
+56. **HPOS sync limitations:** May timeout with 77+ orders, use direct SQL UPDATE as fallback
+
+**Why:** Prevents overwrite, correct base, avoids lost work, Git accuracy, disk safety, email spam prevention, proactive monitoring, Docker efficiency, webhook reliability, type safety, customer recovery
 
 ---
 
